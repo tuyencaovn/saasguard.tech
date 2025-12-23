@@ -23,12 +23,13 @@ interface PerformanceChartProps {
 }
 
 export function PerformanceChart({ data }: PerformanceChartProps) {
-  const chartData = useMemo(() => {
-    if (data.length === 0) return [];
-    return data.slice(-30); // Show last 30 data points
+  // Calculate tick interval to show max 6 labels on X-axis
+  const tickInterval = useMemo(() => {
+    if (data.length <= 6) return 0;
+    return Math.ceil(data.length / 6);
   }, [data]);
 
-  if (chartData.length === 0) {
+  if (data.length === 0) {
     return (
       <div className="h-64 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center">
         <span className="text-zinc-600 text-sm">Collecting metrics data...</span>
@@ -39,7 +40,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   return (
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+        <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis
             dataKey="time"
@@ -47,6 +48,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             fontSize={11}
             tickLine={false}
             axisLine={false}
+            interval={tickInterval}
           />
           <YAxis
             stroke="#71717a"

@@ -21,10 +21,10 @@ interface MetricsDataPoint {
 type TimeRange = '15m' | '1h' | '6h' | '24h';
 
 const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; maxPoints: number }> = {
-  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 60 },
-  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 120 },
-  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 180 },
-  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 288 },
+  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 30 },
+  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 30 },
+  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 36 },
+  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 48 },
 };
 
 export default function DashboardPage() {
