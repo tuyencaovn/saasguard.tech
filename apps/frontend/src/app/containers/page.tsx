@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback, useMemo } from 'react';
 import { useDockerEvents } from '@/hooks/use-socket';
 import { ConnectionStatus } from '@/components/connection-status';
 import { formatTime } from '@/lib/utils';
@@ -16,6 +17,9 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type StatusFilter = 'all' | 'running' | 'stopped' | 'error';
+type ViewMode = 'grid' | 'list';
 
 const stateColors: Record<string, string> = {
   running: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -36,12 +40,46 @@ const actionColors: Record<string, string> = {
 };
 
 export default function ContainersPage() {
-  const { containers, events, loading } = useDockerEvents();
+  const { containers, events, loading, refetch } = useDockerEvents();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Filter containers based on status and search query
+  const filteredContainers = useMemo(() => {
+    return containers.filter((container) => {
+      // Status filter
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'running' && container.state === 'running') ||
+        (statusFilter === 'stopped' && container.state === 'exited') ||
+        (statusFilter === 'error' && container.state === 'dead');
+
+      // Search filter
+      const matchesSearch =
+        !searchQuery ||
+        container.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        container.image.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [containers, statusFilter, searchQuery]);
 
   const totalContainers = containers.length;
   const runningContainers = containers.filter((c) => c.state === 'running').length;
   const stoppedContainers = containers.filter((c) => c.state === 'exited').length;
   const errorContainers = containers.filter((c) => c.state === 'dead').length;
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, [refetch]);
+
+  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusFilter(e.target.value as StatusFilter);
+  };
 
   return (
     <div className="min-h-screen">
@@ -54,8 +92,12 @@ export default function ContainersPage() {
           </div>
           <div className="flex items-center gap-4">
             <ConnectionStatus />
-            <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all">
-              <RefreshCw className="w-5 h-5" />
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={cn('w-5 h-5', isRefreshing && 'animate-spin')} />
             </button>
           </div>
         </div>
@@ -121,41 +163,66 @@ export default function ContainersPage() {
             <input
               type="text"
               placeholder="Search containers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
             />
           </div>
 
-          <select className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer">
-            <option>All Status</option>
-            <option>Running</option>
-            <option>Stopped</option>
-            <option>Error</option>
+          <select
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="running">Running</option>
+            <option value="stopped">Stopped</option>
+            <option value="error">Error</option>
           </select>
 
           <div className="flex items-center gap-2 p-1 bg-white/5 border border-white/10 rounded-xl">
-            <button className="p-2 bg-white/10 text-white rounded-lg">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+              )}
+            >
               <LayoutGrid className="w-5 h-5" />
             </button>
-            <button className="p-2 text-white/40 hover:text-white rounded-lg transition-colors">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                viewMode === 'list' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'
+              )}
+            >
               <List className="w-5 h-5" />
             </button>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all">
-            <RefreshCw className="w-5 h-5" />
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={cn('w-5 h-5', isRefreshing && 'animate-spin')} />
             Refresh All
           </button>
         </div>
 
-        {/* Container Table */}
+        {/* Container Display */}
         <div className="glass-card rounded-2xl overflow-hidden">
           {loading ? (
             <div className="text-center py-12 text-white/40">Loading containers...</div>
-          ) : containers.length === 0 ? (
+          ) : filteredContainers.length === 0 ? (
             <div className="text-center py-12 text-white/40">
-              No containers found. Docker may not be connected.
+              {containers.length === 0
+                ? 'No containers found. Docker may not be connected.'
+                : 'No containers match your filters.'}
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
+            /* List View (Table) */
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -181,7 +248,7 @@ export default function ContainersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {containers.map((container) => (
+                  {filteredContainers.map((container) => (
                     <tr
                       key={container.id}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
@@ -279,13 +346,89 @@ export default function ContainersPage() {
                 </tbody>
               </table>
             </div>
+          ) : (
+            /* Grid View */
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredContainers.map((container) => (
+                <div
+                  key={container.id}
+                  className={cn(
+                    'p-4 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer',
+                    container.state !== 'running' && 'opacity-60'
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={cn(
+                        'w-10 h-10 rounded-xl flex items-center justify-center',
+                        container.state === 'running' ? 'bg-emerald-500/10' : 'bg-white/5'
+                      )}
+                    >
+                      <Box
+                        className={cn(
+                          'w-5 h-5',
+                          container.state === 'running' ? 'text-emerald-400' : 'text-white/30'
+                        )}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{container.name}</div>
+                      <div className="text-xs text-white/40 font-mono truncate">{container.image}</div>
+                    </div>
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full flex-shrink-0',
+                        container.state === 'running'
+                          ? 'bg-emerald-500 status-running'
+                          : container.state === 'dead'
+                            ? 'bg-red-500'
+                            : 'bg-white/30'
+                      )}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full border',
+                        stateColors[container.state] || stateColors.exited
+                      )}
+                    >
+                      {container.state.charAt(0).toUpperCase() + container.state.slice(1)}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {container.state === 'running' ? (
+                        <button
+                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
+                          title="Stop"
+                        >
+                          <Square className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
+                          title="Start"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
+                        title="Restart"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Pagination */}
-          {containers.length > 0 && (
+          {filteredContainers.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
               <div className="text-sm text-white/40">
-                Showing 1-{containers.length} of {containers.length} containers
+                Showing {filteredContainers.length} of {containers.length} containers
               </div>
               <div className="flex items-center gap-2">
                 <button className="px-3 py-1 text-sm text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
