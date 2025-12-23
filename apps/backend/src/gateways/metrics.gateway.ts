@@ -21,6 +21,7 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   server: Server;
 
   private readonly logger = new Logger(MetricsGateway.name);
+  private lastMetrics: SystemMetrics | null = null;
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -34,6 +35,10 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   handleSubscribeMetrics(@ConnectedSocket() client: Socket) {
     client.join('metrics-room');
     this.logger.debug(`Client ${client.id} subscribed to metrics`);
+    // Send last known metrics immediately to new subscriber
+    if (this.lastMetrics) {
+      client.emit('metrics:update', this.lastMetrics);
+    }
     return { event: 'subscribed', data: { room: 'metrics' } };
   }
 
@@ -60,6 +65,7 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
    * Broadcast metrics to all subscribed clients
    */
   broadcastMetrics(metrics: SystemMetrics) {
+    this.lastMetrics = metrics;
     this.server.to('metrics-room').emit('metrics:update', metrics);
   }
 

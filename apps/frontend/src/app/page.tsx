@@ -1,16 +1,46 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
+import { PerformanceChart } from '@/components/performance-chart';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { formatBytes } from '@/lib/utils';
 import { Box, Clock, Activity, Cpu } from 'lucide-react';
 import Link from 'next/link';
 
+interface MetricsDataPoint {
+  time: string;
+  cpu: number;
+  ram: number;
+  disk: number;
+}
+
 export default function DashboardPage() {
   const { metrics } = useMetrics();
   const { containers } = useDockerEvents();
+  const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
+  const lastTimestampRef = useRef<string | null>(null);
+
+  // Store metrics history for chart
+  useEffect(() => {
+    if (metrics && metrics.timestamp !== lastTimestampRef.current) {
+      lastTimestampRef.current = metrics.timestamp;
+      const dataPoint: MetricsDataPoint = {
+        time: new Date(metrics.timestamp).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }),
+        cpu: metrics.cpu.usage,
+        ram: metrics.ram.usagePercent,
+        disk: metrics.disk[0]?.usagePercent ?? 0,
+      };
+      setMetricsHistory((prev) => [...prev.slice(-59), dataPoint]); // Keep last 60 points
+    }
+  }, [metrics]);
 
   const runningContainers = containers.filter((c) => c.state === 'running').length;
 
@@ -125,9 +155,7 @@ export default function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center">
-                    <span className="text-zinc-600 text-sm">[Recharts LineChart - Coming in future update]</span>
-                  </div>
+                  <PerformanceChart data={metricsHistory} />
                 </CardContent>
               </Card>
 
