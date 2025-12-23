@@ -26,10 +26,20 @@ export interface UptimeMetrics {
   bootTime: string;
 }
 
+export interface NetworkMetrics {
+  interface: string;
+  rx: number; // bytes received per second
+  tx: number; // bytes transmitted per second
+  rxTotal: number; // total bytes received
+  txTotal: number; // total bytes transmitted
+  speed: number; // link speed in Mbps (0 if unknown)
+}
+
 export interface SystemMetrics {
   cpu: CpuMetrics;
   ram: RamMetrics;
   disk: DiskMetrics[];
+  network: NetworkMetrics;
   uptime: UptimeMetrics;
   timestamp: string;
 }

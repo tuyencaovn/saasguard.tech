@@ -6,7 +6,7 @@ import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
 import { PerformanceChart } from '@/components/performance-chart';
 import { formatBytes, formatUptime } from '@/lib/utils';
-import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer } from 'lucide-react';
+import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer, Wifi, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,15 @@ const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; max
   '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 72, sampleInterval: 5 * 60 * 1000 }, // 5m
   '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
 };
+
+// Format network speed (bytes per second to MB/s)
+function formatNetworkSpeed(bytesPerSec: number): string {
+  const mbps = bytesPerSec / (1024 * 1024);
+  if (mbps < 0.01) return '0';
+  if (mbps < 1) return mbps.toFixed(2);
+  if (mbps < 10) return mbps.toFixed(1);
+  return Math.round(mbps).toString();
+}
 
 // Fetch metrics history from API
 async function fetchMetricsHistory(minutes: number): Promise<MetricsDataPoint[]> {
@@ -175,35 +184,48 @@ export default function DashboardPage() {
                 subtitle={metrics.disk[0]?.mount || '/'}
               />
 
-              {/* Network / Quick Stats Card */}
+              {/* Network Card */}
               <div className="glass-card metric-network rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                      <Activity className="w-5 h-5 text-emerald-400" />
+                      <Wifi className="w-5 h-5 text-emerald-400" />
                     </div>
-                    <span className="text-sm font-medium text-white/60">Quick Stats</span>
+                    <span className="text-sm font-medium text-white/60">Network</span>
                   </div>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 status-running" />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-sm">CPU Model</span>
-                    <span className="text-white text-sm font-mono">{metrics.cpu.model}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-sm">Speed</span>
-                    <span className="text-white text-sm font-mono">{metrics.cpu.speed} GHz</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-sm">Containers</span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono font-semibold text-emerald-400">{runningContainers}</span>
-                      <span className="text-white/30">/</span>
-                      <span className="font-mono text-white/40">{containers.length}</span>
+                <div className="flex flex-col items-center justify-center gap-4 py-2">
+                  {/* Upload */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <ArrowUp className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-white">
+                        {formatNetworkSpeed(metrics.network?.tx || 0)}
+                      </span>
+                      <span className="text-white/40 text-sm">MB/s</span>
                     </div>
                   </div>
+
+                  {/* Download */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <ArrowDown className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-white">
+                        {formatNetworkSpeed(metrics.network?.rx || 0)}
+                      </span>
+                      <span className="text-white/40 text-sm">MB/s</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center text-white/40 text-xs mt-4">
+                  {metrics.network?.interface || 'eth0'} - {metrics.network?.speed ? `${metrics.network.speed >= 1000 ? `${metrics.network.speed / 1000} Gbps` : `${metrics.network.speed} Mbps`}` : 'Unknown'}
                 </div>
               </div>
             </div>
