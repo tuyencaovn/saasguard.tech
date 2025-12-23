@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
+import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/sidebar';
 
-const ibmPlexSans = IBM_Plex_Sans({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
   variable: '--font-sans',
 });
 
@@ -30,8 +30,8 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={cn(
-          'min-h-screen bg-[#0a0a0b] font-sans antialiased text-zinc-50',
-          ibmPlexSans.variable,
+          'min-h-screen font-sans antialiased text-white',
+          spaceGrotesk.variable,
           jetbrainsMono.variable
         )}
       >

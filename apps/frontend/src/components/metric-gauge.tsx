@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Cpu, Server, HardDrive, Wifi } from 'lucide-react';
 
 interface MetricGaugeProps {
   label: string;
@@ -9,21 +10,46 @@ interface MetricGaugeProps {
   unit?: string;
   subtitle?: string;
   thresholds?: { warning: number; critical: number };
-  color?: 'violet' | 'cyan' | 'amber' | 'green';
+  color?: 'violet' | 'cyan' | 'amber' | 'emerald';
 }
 
-const colorClasses = {
-  violet: 'stroke-violet-500',
-  cyan: 'stroke-cyan-500',
-  amber: 'stroke-amber-500',
-  green: 'stroke-green-500',
-};
-
-const textColorClasses = {
-  violet: 'text-violet-500',
-  cyan: 'text-cyan-500',
-  amber: 'text-amber-500',
-  green: 'text-green-500',
+const colorConfig = {
+  violet: {
+    stroke: 'stroke-violet-500',
+    text: 'text-violet-500',
+    bg: 'bg-violet-500/20',
+    iconText: 'text-violet-400',
+    glow: 'gauge-glow-violet',
+    metricClass: 'metric-cpu',
+    icon: Cpu,
+  },
+  cyan: {
+    stroke: 'stroke-cyan-500',
+    text: 'text-cyan-500',
+    bg: 'bg-cyan-500/20',
+    iconText: 'text-cyan-400',
+    glow: 'gauge-glow-cyan',
+    metricClass: 'metric-ram',
+    icon: Server,
+  },
+  amber: {
+    stroke: 'stroke-amber-500',
+    text: 'text-amber-500',
+    bg: 'bg-amber-500/20',
+    iconText: 'text-amber-400',
+    glow: 'gauge-glow-amber',
+    metricClass: 'metric-disk',
+    icon: HardDrive,
+  },
+  emerald: {
+    stroke: 'stroke-emerald-500',
+    text: 'text-emerald-500',
+    bg: 'bg-emerald-500/20',
+    iconText: 'text-emerald-400',
+    glow: 'gauge-glow-violet',
+    metricClass: 'metric-network',
+    icon: Wifi,
+  },
 };
 
 export function MetricGauge({
@@ -36,63 +62,73 @@ export function MetricGauge({
   color = 'violet',
 }: MetricGaugeProps) {
   const percentage = Math.min((value / max) * 100, 100);
-  const circumference = 2 * Math.PI * 40; // radius = 40
+  const circumference = 2 * Math.PI * 42; // radius = 42
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  // Determine color based on thresholds
-  let statusColor = color;
-  let statusDot = 'bg-green-500';
+  // Determine status color based on thresholds
+  let statusDot = 'bg-emerald-500 status-running';
+  let isWarning = false;
 
   if (thresholds) {
     if (percentage >= thresholds.critical) {
-      statusColor = 'amber';
-      statusDot = 'bg-red-500';
+      statusDot = 'bg-red-500 status-error';
+      isWarning = true;
     } else if (percentage >= thresholds.warning) {
-      statusColor = 'amber';
-      statusDot = 'bg-amber-500';
+      statusDot = 'bg-amber-500 status-warning';
+      isWarning = true;
     }
   }
 
+  const config = colorConfig[color];
+  const Icon = config.icon;
+
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+    <div className={cn('glass-card rounded-2xl p-6', config.metricClass)}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', config.bg)}>
+            <Icon className={cn('w-5 h-5', config.iconText)} />
+          </div>
+          <span className="text-sm font-medium text-white/60">{label}</span>
+        </div>
         <span className={cn('w-2 h-2 rounded-full', statusDot)} />
       </div>
 
-      {/* Circular Gauge */}
-      <div className="relative w-28 h-28 mx-auto mb-4">
+      {/* Premium Circular Gauge */}
+      <div className="relative w-32 h-32 mx-auto mb-4">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-          {/* Background circle */}
-          <circle cx="50" cy="50" r="40" strokeWidth="8" className="stroke-zinc-800 fill-none" />
-          {/* Progress circle */}
+          {/* Background ring */}
+          <circle cx="50" cy="50" r="42" strokeWidth="6" className="stroke-white/5 fill-none" />
+          {/* Progress ring with glow */}
           <circle
             cx="50"
             cy="50"
-            r="40"
-            strokeWidth="8"
+            r="42"
+            strokeWidth="6"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
-            className={cn('fill-none transition-all duration-500', colorClasses[statusColor])}
+            className={cn('fill-none gauge-progress', config.stroke, config.glow)}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={cn(
-              'font-mono text-2xl font-semibold',
-              thresholds && percentage >= thresholds.warning && textColorClasses[statusColor]
+              'font-mono text-3xl font-bold counter-value',
+              isWarning && config.text
             )}
           >
             {value.toFixed(1)}
-            {unit}
           </span>
+          <span className="text-xs text-white/40">percent</span>
         </div>
       </div>
 
+      {/* Subtitle */}
       {subtitle && (
         <div className="text-center">
-          <div className="text-xs text-zinc-500">{subtitle}</div>
+          <p className="text-xs text-white/40">{subtitle}</p>
         </div>
       )}
     </div>

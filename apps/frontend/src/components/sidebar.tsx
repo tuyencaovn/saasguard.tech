@@ -14,54 +14,68 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Containers', href: '/containers', icon: Box },
-  { name: 'Alerts', href: '/alerts', icon: Bell },
+  { name: 'Containers', href: '/containers', icon: Box, badge: '8' },
+  { name: 'Alerts', href: '/alerts', icon: Bell, hasNotification: true },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+    <aside className="fixed inset-y-0 left-0 w-64 sidebar-glass flex flex-col z-20">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-zinc-800">
-        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+      <div className="flex items-center gap-3 px-6 py-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
           <Server className="w-5 h-5 text-white" />
         </div>
         <div>
-          <span className="font-semibold text-zinc-50">BimNext</span>
-          <span className="text-xs text-zinc-500 block">Server Monitor</span>
+          <span className="font-semibold text-white">BimNext</span>
+          <span className="text-xs text-white/40 block">Server Monitor</span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors',
-                isActive
-                  ? 'bg-zinc-800 text-zinc-50'
-                  : 'text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-              {item.name === 'Alerts' && (
-                <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full" />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4">
+        <div className="space-y-1">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
+                  isActive
+                    ? 'nav-active text-white'
+                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                )}
+              >
+                <item.icon
+                  className={cn('w-5 h-5', isActive && 'text-violet-400')}
+                />
+                {item.name}
+                {item.badge && (
+                  <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-white/10 text-white/60 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
+                {item.hasNotification && (
+                  <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full status-warning" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
 
-        <div className="pt-4 mt-4 border-t border-zinc-800">
+        <div className="mt-8 pt-6 border-t border-white/5">
           <Link
             href="/settings"
-            className="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
+              pathname === '/settings'
+                ? 'nav-active text-white'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            )}
           >
             <Settings className="w-5 h-5" />
             Settings
@@ -70,16 +84,16 @@ export function Sidebar() {
       </nav>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 mx-3 mb-4 rounded-xl bg-white/5 border border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-zinc-700 rounded-full flex items-center justify-center text-sm font-medium">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-medium shadow-lg shadow-violet-500/20">
             AD
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-zinc-50 truncate">Admin User</div>
-            <div className="text-xs text-zinc-500 truncate">admin@bimnext.com</div>
+            <div className="text-sm font-medium truncate">Admin User</div>
+            <div className="text-xs text-white/40 truncate">admin@bimnext.com</div>
           </div>
-          <button className="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded transition-colors">
+          <button className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all">
             <LogOut className="w-5 h-5" />
           </button>
         </div>
