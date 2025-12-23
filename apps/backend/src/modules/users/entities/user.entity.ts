@@ -9,7 +9,7 @@ import {
 
 export enum UserRole {
   ADMIN = 'admin',
-  USER = 'user',
+  VIEWER = 'viewer',
 }
 
 @Entity('users')
@@ -24,7 +24,7 @@ export class User {
   @Column()
   password: string; // bcrypt hashed
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.VIEWER })
   role: UserRole;
 
   @Column({ default: true })

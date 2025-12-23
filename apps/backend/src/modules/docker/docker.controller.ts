@@ -8,8 +8,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DockerService } from './docker.service';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('docker')
+@Public() // TODO: Remove after frontend auth implemented
 export class DockerController {
   constructor(private readonly dockerService: DockerService) {}
 

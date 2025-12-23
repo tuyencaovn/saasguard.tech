@@ -29,7 +29,11 @@
       "Bash(pnpm add:*)",
       "Bash(jq:*)",
       "Bash(node -e:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(lsof:*)",
+      "Bash(pm2 list:*)",
+      "Bash(grep:*)"
     ]
   }
 }

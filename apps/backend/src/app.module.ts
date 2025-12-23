@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
@@ -10,6 +11,9 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { DockerModule } from './modules/docker/docker.module';
 import { GatewaysModule } from './gateways/gateways.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
 
 @Module({
   imports: [
@@ -34,6 +38,7 @@ import { GatewaysModule } from './gateways/gateways.module';
     }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
+    AuthModule,
     UsersModule,
     AlertsModule,
     MetricsModule,
@@ -41,6 +46,11 @@ import { GatewaysModule } from './gateways/gateways.module';
     GatewaysModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global guards - all routes require auth by default
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}

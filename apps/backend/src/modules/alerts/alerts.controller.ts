@@ -12,8 +12,10 @@ import {
 import { AlertsService } from './alerts.service';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { UpdateThresholdDto } from './dto/update-threshold.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('alerts')
+@Public() // TODO: Remove after frontend auth implemented
 export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 

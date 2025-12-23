@@ -61,7 +61,7 @@ export class UsersService {
     await this.userRepository.remove(user);
   }
 
-  async validatePassword(user: User, password: string): Promise<boolean> {
-    return bcrypt.compare(password, user.password);
+  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(plainPassword, hashedPassword);
   }
 }

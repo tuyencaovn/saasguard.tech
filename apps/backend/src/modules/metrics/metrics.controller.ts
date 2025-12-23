@@ -1,7 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('metrics')
+@Public() // TODO: Remove after frontend auth implemented
 export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
 
