@@ -1,7 +1,9 @@
-import { Controller, Post, Body, Res, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Res, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { CurrentUserData } from './decorators/current-user.decorator';
@@ -48,5 +50,25 @@ export class AuthController {
   @Get('me')
   async getCurrentUser(@CurrentUser() user: CurrentUserData) {
     return { user };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Public()
+  @Get('reset-password/validate')
+  async validateResetToken(@Query('token') token: string) {
+    return this.authService.validateResetToken(token);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

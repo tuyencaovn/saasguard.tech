@@ -26,6 +26,7 @@ Full-stack TypeScript application for real-time server monitoring with alert not
 | `systeminformation` | System metrics (CPU/RAM/Disk/Network) |
 | `dockerode` | Docker container monitoring |
 | `pm2` | PM2 process management |
+| `nodemailer` | SMTP email sending |
 | `@nestjs/websockets` | WebSocket gateway |
 | `socket.io` | Real-time communication |
 | `@sendgrid/mail` | Email notifications |
@@ -135,6 +136,13 @@ DATABASE_NAME=bimnext_monitor
 JWT_SECRET=your-secret-key
 SENDGRID_API_KEY=SG.xxx
 TELEGRAM_BOT_TOKEN=xxx:xxx
+# SMTP (for password reset)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM_NAME=BimNext Monitor
+FRONTEND_URL=http://localhost:3006
 
 # Frontend (.env.example)
 PORT=3006
@@ -192,6 +200,8 @@ pnpm db:down      # Stop PostgreSQL
 - **Role-based access**: Admin and Viewer roles
 - **JWT cookies**: HTTP-only secure cookies
 - **Invitation system**: Admin invites new users via email
+- **Forgot password**: Password reset via email (SMTP)
+- **Token expiry**: Reset tokens expire in 15 minutes
 
 ### Alerts Page (Planned)
 - Alert rules configuration
