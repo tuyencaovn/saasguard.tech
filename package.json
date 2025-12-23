@@ -1,0 +1,22 @@
+{
+  "name": "bimnext-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.1",
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:pm2": "pm2 start ecosystem.config.js",
+    "dev:logs": "pm2 logs",
+    "dev:stop": "pm2 stop all",
+    "dev:restart": "pm2 restart all",
+    "dev:backend": "pnpm --filter backend run start:dev",
+    "dev:frontend": "pnpm --filter frontend run dev",
+    "build": "pnpm -r run build",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

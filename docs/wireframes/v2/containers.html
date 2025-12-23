@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Containers - BimNext Server Monitor V2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+    }
+
+    .sidebar-glass {
+      background: rgba(15, 15, 35, 0.8);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .glass-table {
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .table-row {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .table-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .table-row.running:hover {
+      background: rgba(34, 197, 94, 0.05);
+    }
+
+    .table-row.error:hover {
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .status-running {
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    }
+
+    .status-error {
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+      animation: pulse-error 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-error {
+      0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+      50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.8); }
+    }
+
+    .progress-bar {
+      transition: width 0.5s ease-out;
+    }
+
+    .header-blur {
+      background: rgba(15, 15, 35, 0.7);
+      backdrop-filter: blur(20px);
+    }
+
+    .nav-active {
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, transparent 100%);
+      border-left: 2px solid #8b5cf6;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .search-glow:focus {
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2), 0 0 20px rgba(139, 92, 246, 0.15);
+    }
+
+    .action-btn {
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .action-btn.stop:hover {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .action-btn.start:hover {
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .action-btn.restart:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .action-btn.delete:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .view-toggle {
+      transition: all 0.2s ease;
+    }
+
+    .view-toggle.active {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border-color: rgba(139, 92, 246, 0.3);
+      color: white;
+    }
+
+    .resource-cpu {
+      background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+    }
+
+    .resource-ram {
+      background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%);
+    }
+
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .badge-animated {
+      animation: badge-pulse 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-white overflow-x-hidden">
+  <!-- WIREFRAME V2: Containers Page - LIST VIEW DEFAULT -->
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="fixed inset-y-0 left-0 w-64 sidebar-glass flex flex-col z-20">
+      <div class="flex items-center gap-3 px-6 py-6">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-white">BimNext</span>
+          <span class="text-xs text-white/40 block">Server Monitor</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-3 py-4">
+        <div class="space-y-1">
+          <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+            </svg>
+            Dashboard
+          </a>
+
+          <a href="containers.html" class="nav-active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+            <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            Containers
+            <span class="ml-auto px-2 py-0.5 text-xs font-medium bg-violet-500/20 text-violet-400 rounded-full badge-animated">8</span>
+          </a>
+
+          <a href="alerts.html" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            Alerts
+            <span class="ml-auto w-2 h-2 bg-amber-500 rounded-full" style="box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);"></span>
+          </a>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-white/5">
+          <a href="#" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+
+      <div class="p-4 mx-3 mb-4 rounded-xl bg-white/5 border border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-medium shadow-lg shadow-violet-500/20">
+            AD
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate">Admin User</div>
+            <div class="text-xs text-white/40 truncate">admin@bimnext.com</div>
+          </div>
+          <button class="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64">
+      <header class="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">Containers</h1>
+            <p class="text-sm text-white/40">Docker container management</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full status-running"></span>
+              <span class="text-sm text-emerald-400 font-medium">Live</span>
+            </div>
+
+            <button class="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-8">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="glass-card rounded-2xl p-5 flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 flex items-center justify-center border border-blue-500/20">
+              <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-3xl font-bold font-mono">8</div>
+              <div class="text-sm text-white/40">Total Containers</div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+              <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-3xl font-bold font-mono text-emerald-400">6</div>
+              <div class="text-sm text-white/40">Running</div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
+              <svg class="w-7 h-7 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-3xl font-bold font-mono text-white/50">1</div>
+              <div class="text-sm text-white/40">Stopped</div>
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-5 flex items-center gap-4">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500/20 to-red-600/10 flex items-center justify-center border border-red-500/20">
+              <svg class="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-3xl font-bold font-mono text-red-400">1</div>
+              <div class="text-sm text-white/40">Error</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-80">
+              <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search containers..."
+                class="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 search-glow transition-all"
+              />
+            </div>
+
+            <select class="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer">
+              <option>All Status</option>
+              <option>Running</option>
+              <option>Stopped</option>
+              <option>Error</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- View Toggle - LIST is now active by default -->
+            <div class="flex items-center p-1 bg-white/5 border border-white/10 rounded-xl">
+              <button class="view-toggle p-2 rounded-lg text-white/40 hover:text-white/60">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+              </button>
+              <button class="view-toggle active p-2 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+              </button>
+            </div>
+
+            <button class="px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 border border-white/10 rounded-xl transition-all flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh All
+            </button>
+          </div>
+        </div>
+
+        <!-- Container Table/List View (DEFAULT) -->
+        <div class="glass-table rounded-2xl overflow-hidden">
+          <!-- Table Header -->
+          <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-white/5 border-b border-white/5 text-sm font-medium text-white/50">
+            <div class="col-span-1 flex items-center">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3">CONTAINER</div>
+            <div class="col-span-1">STATUS</div>
+            <div class="col-span-2">CPU</div>
+            <div class="col-span-2">MEMORY</div>
+            <div class="col-span-1">NETWORK I/O</div>
+            <div class="col-span-1">UPTIME</div>
+            <div class="col-span-1 text-right">ACTIONS</div>
+          </div>
+
+          <!-- Table Rows -->
+          <!-- nginx-proxy (Running) -->
+          <div class="table-row running grid grid-cols-12 gap-4 px-6 py-4 items-center">
+            <div class="col-span-1">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-medium">nginx-proxy</div>
+                <div class="text-xs text-white/40 font-mono">nginx:1.25-alpine</div>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 status-running"></span>
+                Running
+              </span>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-cpu rounded-full progress-bar" style="width: 2.3%"></div>
+                </div>
+                <span class="text-sm font-mono w-12 text-right">2.3%</span>
+              </div>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-ram rounded-full progress-bar" style="width: 12%"></div>
+                </div>
+                <span class="text-sm font-mono w-16 text-right">128 MB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <div class="text-sm">
+                <span class="text-emerald-400">↑</span> <span class="font-mono text-white/60">1.2 GB</span><br/>
+                <span class="text-blue-400">↓</span> <span class="font-mono text-white/60">3.4 GB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm font-mono text-white/60">12d 4h</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-end gap-1">
+              <button class="action-btn p-2 text-white/40 rounded-lg" title="View Logs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button class="action-btn restart p-2 text-white/40 rounded-lg" title="Restart">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+              <button class="action-btn stop p-2 text-white/40 rounded-lg" title="Stop">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                </svg>
+              </button>
+              <button class="p-2 text-white/40 hover:text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- postgres-main (Running) -->
+          <div class="table-row running grid grid-cols-12 gap-4 px-6 py-4 items-center">
+            <div class="col-span-1">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-medium">postgres-main</div>
+                <div class="text-xs text-white/40 font-mono">postgres:16-alpine</div>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 status-running"></span>
+                Running
+              </span>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-cpu rounded-full progress-bar" style="width: 8.7%"></div>
+                </div>
+                <span class="text-sm font-mono w-12 text-right">8.7%</span>
+              </div>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-ram rounded-full progress-bar" style="width: 50%"></div>
+                </div>
+                <span class="text-sm font-mono w-16 text-right">512 MB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <div class="text-sm">
+                <span class="text-emerald-400">↑</span> <span class="font-mono text-white/60">456 MB</span><br/>
+                <span class="text-blue-400">↓</span> <span class="font-mono text-white/60">892 MB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm font-mono text-white/60">45d 2h</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-end gap-1">
+              <button class="action-btn p-2 text-white/40 rounded-lg" title="View Logs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button class="action-btn restart p-2 text-white/40 rounded-lg" title="Restart">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+              <button class="action-btn stop p-2 text-white/40 rounded-lg" title="Stop">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                </svg>
+              </button>
+              <button class="p-2 text-white/40 hover:text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- redis-cache (Running) -->
+          <div class="table-row running grid grid-cols-12 gap-4 px-6 py-4 items-center">
+            <div class="col-span-1">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-medium">redis-cache</div>
+                <div class="text-xs text-white/40 font-mono">redis:7-alpine</div>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 status-running"></span>
+                Running
+              </span>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-cpu rounded-full progress-bar" style="width: 0.5%"></div>
+                </div>
+                <span class="text-sm font-mono w-12 text-right">0.5%</span>
+              </div>
+            </div>
+            <div class="col-span-2">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full resource-ram rounded-full progress-bar" style="width: 6%"></div>
+                </div>
+                <span class="text-sm font-mono w-16 text-right">64 MB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <div class="text-sm">
+                <span class="text-emerald-400">↑</span> <span class="font-mono text-white/60">234 MB</span><br/>
+                <span class="text-blue-400">↓</span> <span class="font-mono text-white/60">567 MB</span>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm font-mono text-white/60">30d 8h</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-end gap-1">
+              <button class="action-btn p-2 text-white/40 rounded-lg" title="View Logs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button class="action-btn restart p-2 text-white/40 rounded-lg" title="Restart">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+              <button class="action-btn stop p-2 text-white/40 rounded-lg" title="Stop">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                </svg>
+              </button>
+              <button class="p-2 text-white/40 hover:text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- test-api (Stopped) -->
+          <div class="table-row grid grid-cols-12 gap-4 px-6 py-4 items-center opacity-50">
+            <div class="col-span-1">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                <svg class="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-medium">test-api</div>
+                <div class="text-xs text-white/40 font-mono">node:20-alpine</div>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-white/5 text-white/40 border border-white/10 w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+                Stopped
+              </span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-end gap-1">
+              <button class="action-btn p-2 text-white/40 rounded-lg" title="View Logs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button class="action-btn start p-2 text-white/40 rounded-lg" title="Start">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
+              <button class="action-btn delete p-2 text-white/40 rounded-lg" title="Remove">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+              <button class="p-2 text-white/40 hover:text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- worker-queue (Error) -->
+          <div class="table-row error grid grid-cols-12 gap-4 px-6 py-4 items-center">
+            <div class="col-span-1">
+              <input type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+            </div>
+            <div class="col-span-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/10 flex items-center justify-center border border-red-500/20">
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-medium">worker-queue</div>
+                <div class="text-xs text-white/40 font-mono">python:3.12-slim</div>
+              </div>
+            </div>
+            <div class="col-span-1">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-400 border border-red-500/20 w-fit">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 status-error"></span>
+                Exited (1)
+              </span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm text-white/30">--</span>
+            </div>
+            <div class="col-span-1">
+              <span class="text-sm text-red-400">Crashed 2h ago</span>
+            </div>
+            <div class="col-span-1 flex items-center justify-end gap-1">
+              <button class="action-btn p-2 text-white/40 rounded-lg" title="View Logs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button class="action-btn start p-2 text-white/40 rounded-lg" title="Start">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
+              <button class="action-btn delete p-2 text-white/40 rounded-lg" title="Remove">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+              <button class="p-2 text-white/40 hover:text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between mt-6 text-sm">
+          <span class="text-white/40">Showing <span class="text-white font-medium">1-5</span> of <span class="text-white font-medium">8</span> containers</span>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">Previous</button>
+            <button class="px-3 py-1.5 bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 font-medium">1</button>
+            <button class="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">2</button>
+            <button class="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">Next</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!--
+    DESIGN NOTES V2 (LIST VIEW):
+    ============================
+    - Default view is now LIST (table) for easier scanning
+    - View toggle: List is active by default
+    - Keeps V2 modern styling (glassmorphism, gradients, glow)
+    - Table rows have hover effects based on status
+    - Progress bars for CPU/RAM with gradient fills
+    - Status badges with glow effects
+    - Action buttons with micro-interactions
+  -->
+</body>
+</html>

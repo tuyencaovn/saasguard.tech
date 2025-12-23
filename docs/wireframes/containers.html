@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Containers - BimNext Server Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { background-color: #0a0a0b; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  </style>
+</head>
+<body class="min-h-screen font-sans antialiased text-zinc-50">
+  <!--
+    WIREFRAME: Containers Page
+    ==========================
+    Purpose: Docker container management and monitoring
+    Layout: Table view with status, resource usage, actions
+    Components: Search, filters, table, action buttons, modals
+  -->
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar Navigation (Same as dashboard) -->
+    <aside class="fixed inset-y-0 left-0 w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+      <div class="flex items-center gap-3 px-4 py-5 border-b border-zinc-800">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-zinc-50">BimNext</span>
+          <span class="text-xs text-zinc-500 block">Server Monitor</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+          </svg>
+          Dashboard
+        </a>
+
+        <!-- Active state -->
+        <a href="containers.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-50 bg-zinc-800 rounded-lg font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+          </svg>
+          Containers
+          <span class="ml-auto px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-400 rounded-full">8</span>
+        </a>
+
+        <a href="alerts.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+          Alerts
+          <span class="ml-auto w-2 h-2 bg-amber-500 rounded-full"></span>
+        </a>
+
+        <div class="pt-4 mt-4 border-t border-zinc-800">
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-zinc-800">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-zinc-700 rounded-full flex items-center justify-center text-sm font-medium">AD</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-50 truncate">Admin User</div>
+            <div class="text-xs text-zinc-500 truncate">admin@bimnext.com</div>
+          </div>
+          <button class="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64">
+      <!-- Header -->
+      <header class="sticky top-0 z-10 bg-[#0a0a0b]/80 backdrop-blur-md border-b border-zinc-800 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">Containers</h1>
+            <p class="text-sm text-zinc-500">Docker container management</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- Live Indicator -->
+            <div class="flex items-center gap-2 text-sm text-zinc-400">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              Live
+            </div>
+
+            <!-- Refresh -->
+            <button class="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-50 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="p-8">
+        <!-- Summary Cards -->
+        <!-- ANNOTATION: Quick stats at top showing container counts by status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-mono">8</div>
+              <div class="text-xs text-zinc-500">Total Containers</div>
+            </div>
+          </div>
+
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+            <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-mono text-green-500">6</div>
+              <div class="text-xs text-zinc-500">Running</div>
+            </div>
+          </div>
+
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+            <div class="w-12 h-12 bg-zinc-500/10 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-mono text-zinc-500">2</div>
+              <div class="text-xs text-zinc-500">Stopped</div>
+            </div>
+          </div>
+
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+            <div class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-bold font-mono text-red-500">0</div>
+              <div class="text-xs text-zinc-500">Errors</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <!-- ANNOTATION: Search bar + filter buttons above table -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <!-- Search -->
+            <div class="relative flex-1 sm:w-80">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search containers..."
+                class="w-full pl-10 pr-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <!-- Filter Dropdown -->
+            <select class="px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option>All Status</option>
+              <option>Running</option>
+              <option>Stopped</option>
+              <option>Error</option>
+            </select>
+          </div>
+
+          <!-- Bulk Actions (shown when items selected) -->
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh All
+            </button>
+          </div>
+        </div>
+
+        <!-- Container Table -->
+        <!-- ANNOTATION: Main data table with sortable columns, status indicators, resource bars, action buttons -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="bg-zinc-900/50 border-b border-zinc-800">
+                  <th class="w-12 px-4 py-3">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">Container</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">Status</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">CPU</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">Memory</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">Network I/O</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500">Uptime</th>
+                  <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-zinc-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800">
+                <!-- Running Container -->
+                <tr class="hover:bg-zinc-800/50 transition-colors">
+                  <td class="px-4 py-4">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div class="font-medium">nginx-proxy</div>
+                        <div class="text-xs text-zinc-500 font-mono">nginx:1.25-alpine</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      Running
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">2.3%</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-violet-500 rounded-full" style="width: 2.3%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">128 MB</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-cyan-500 rounded-full" style="width: 12%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="text-xs">
+                      <div class="flex items-center gap-1 text-emerald-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                        </svg>
+                        <span class="font-mono">1.2 GB</span>
+                      </div>
+                      <div class="flex items-center gap-1 text-blue-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                        </svg>
+                        <span class="font-mono">3.4 GB</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-sm text-zinc-400 font-mono">12d 4h</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <!-- Stop Button -->
+                      <button class="p-2 text-zinc-400 hover:text-amber-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Stop">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                        </svg>
+                      </button>
+                      <!-- Restart Button -->
+                      <button class="p-2 text-zinc-400 hover:text-blue-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Restart">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                      </button>
+                      <!-- Logs Button -->
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="View Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                      <!-- More Actions -->
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="More">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- PostgreSQL Container -->
+                <tr class="hover:bg-zinc-800/50 transition-colors">
+                  <td class="px-4 py-4">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div class="font-medium">postgres-main</div>
+                        <div class="text-xs text-zinc-500 font-mono">postgres:16-alpine</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      Running
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">8.7%</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-violet-500 rounded-full" style="width: 8.7%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">512 MB</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-cyan-500 rounded-full" style="width: 50%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="text-xs">
+                      <div class="flex items-center gap-1 text-emerald-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                        </svg>
+                        <span class="font-mono">456 MB</span>
+                      </div>
+                      <div class="flex items-center gap-1 text-blue-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                        </svg>
+                        <span class="font-mono">892 MB</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-sm text-zinc-400 font-mono">45d 2h</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <button class="p-2 text-zinc-400 hover:text-amber-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Stop">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-blue-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Restart">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="View Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="More">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Redis Container -->
+                <tr class="hover:bg-zinc-800/50 transition-colors">
+                  <td class="px-4 py-4">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div class="font-medium">redis-cache</div>
+                        <div class="text-xs text-zinc-500 font-mono">redis:7-alpine</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                      Running
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">0.5%</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-violet-500 rounded-full" style="width: 0.5%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="w-24">
+                      <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono text-zinc-50">64 MB</span>
+                      </div>
+                      <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-cyan-500 rounded-full" style="width: 6%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="text-xs">
+                      <div class="flex items-center gap-1 text-emerald-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                        </svg>
+                        <span class="font-mono">234 MB</span>
+                      </div>
+                      <div class="flex items-center gap-1 text-blue-500">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                        </svg>
+                        <span class="font-mono">567 MB</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-sm text-zinc-400 font-mono">30d 8h</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <button class="p-2 text-zinc-400 hover:text-amber-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Stop">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-blue-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Restart">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="View Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="More">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Stopped Container -->
+                <tr class="hover:bg-zinc-800/50 transition-colors opacity-60">
+                  <td class="px-4 py-4">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-zinc-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div class="font-medium">test-api</div>
+                        <div class="text-xs text-zinc-500 font-mono">node:20-alpine</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+                      Stopped
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-sm text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <!-- Start Button for stopped containers -->
+                      <button class="p-2 text-zinc-400 hover:text-green-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Start">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="View Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Remove">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="More">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Error Container Example -->
+                <tr class="hover:bg-zinc-800/50 transition-colors">
+                  <td class="px-4 py-4">
+                    <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900" />
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <div class="font-medium">worker-queue</div>
+                        <div class="text-xs text-zinc-500 font-mono">python:3.12-slim</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-red-500/10 text-red-500 border border-red-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                      Exited (1)
+                    </span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs text-zinc-600">--</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-sm text-red-500">Crashed 2h ago</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <button class="p-2 text-zinc-400 hover:text-green-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Start">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="View Logs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 rounded-lg transition-colors" title="Remove">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                      <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors" title="More">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <!-- ANNOTATION: Table pagination controls -->
+          <div class="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
+            <div class="text-sm text-zinc-500">
+              Showing <span class="font-medium text-zinc-300">1-5</span> of <span class="font-medium text-zinc-300">8</span> containers
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Previous
+              </button>
+              <button class="px-3 py-1.5 text-sm bg-zinc-800 text-zinc-50 rounded-lg">1</button>
+              <button class="px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">2</button>
+              <button class="px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!--
+    DESIGN NOTES:
+    =============
+    Table Features:
+    - Checkbox for bulk selection
+    - Status badges with color coding
+    - Resource usage with mini progress bars
+    - Network I/O with directional indicators
+    - Action buttons (stop/start, restart, logs, more)
+
+    Status Colors:
+    - Running: green-500
+    - Stopped: zinc-500
+    - Error/Exited: red-500
+
+    Actions:
+    - Running containers: Stop, Restart, Logs, More
+    - Stopped containers: Start, Logs, Remove, More
+    - Error containers: Start, Logs, Remove, More
+
+    Responsive:
+    - Table scrolls horizontally on small screens
+    - Summary cards stack on mobile
+  -->
+</body>
+</html>

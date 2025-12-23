@@ -4,7 +4,26 @@
       "Bash(python3:*)",
       "Bash(git config:*)",
       "Bash(git add:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(mkdir:*)",
+      "Bash(node /Users/tuyencao/workspace/bimnext_monitor/.claude/scripts/set-active-plan.cjs:*)",
+      "Bash(cat:*)",
+      "Skill(chrome-devtools)",
+      "Bash(curl:*)",
+      "Bash(node screenshot.js:*)",
+      "Bash(npm install:*)",
+      "Bash(node /Users/tuyencao/workspace/bimnext_monitor/.claude/skills/chrome-devtools/scripts/screenshot.js:*)",
+      "Bash(ls:*)",
+      "Bash(npx @nestjs/cli@latest new . --package-manager pnpm --skip-git --skip-install)",
+      "Bash(npx create-next-app@14:*)",
+      "Bash(pnpm install)",
+      "Bash(docker-compose up:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/dev.sh:*)",
+      "Bash(pm2 logs:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(pm2 delete:*)",
+      "Bash(pm2 start:*)"
     ]
   }
 }

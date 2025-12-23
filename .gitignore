@@ -74,3 +74,17 @@ ck.md
 # Gemini CLI settings (symlink to .claude/.mcp.json)
 .gemini/settings.json
 .claude/settings.bak.json
+
+# Docker volumes
+postgres_data/
+
+# IDE
+.idea/
+.vscode/
+
+# NestJS
+/apps/backend/dist/
+
+# Next.js (apps)
+/apps/frontend/.next/
+/apps/frontend/out/

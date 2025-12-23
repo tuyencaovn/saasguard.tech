@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts - BimNext Server Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { background-color: #0a0a0b; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  </style>
+</head>
+<body class="min-h-screen font-sans antialiased text-zinc-50">
+  <!--
+    WIREFRAME: Alerts Page
+    ======================
+    Purpose: Alert threshold configuration and history
+    Layout: Two sections - Configuration rules + Alert history log
+    Components: Rule cards, forms, timeline, filters
+  -->
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar Navigation (Same as other pages) -->
+    <aside class="fixed inset-y-0 left-0 w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+      <div class="flex items-center gap-3 px-4 py-5 border-b border-zinc-800">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-zinc-50">BimNext</span>
+          <span class="text-xs text-zinc-500 block">Server Monitor</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+          </svg>
+          Dashboard
+        </a>
+
+        <a href="containers.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+          </svg>
+          Containers
+          <span class="ml-auto px-2 py-0.5 text-xs font-medium bg-zinc-800 text-zinc-400 rounded-full">8</span>
+        </a>
+
+        <!-- Active state -->
+        <a href="alerts.html" class="flex items-center gap-3 px-3 py-2.5 text-zinc-50 bg-zinc-800 rounded-lg font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+          Alerts
+          <span class="ml-auto w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+        </a>
+
+        <div class="pt-4 mt-4 border-t border-zinc-800">
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-zinc-800">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-zinc-700 rounded-full flex items-center justify-center text-sm font-medium">AD</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-50 truncate">Admin User</div>
+            <div class="text-xs text-zinc-500 truncate">admin@bimnext.com</div>
+          </div>
+          <button class="p-1.5 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64">
+      <!-- Header -->
+      <header class="sticky top-0 z-10 bg-[#0a0a0b]/80 backdrop-blur-md border-b border-zinc-800 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">Alerts</h1>
+            <p class="text-sm text-zinc-500">Configure thresholds and view alert history</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- Add Rule Button -->
+            <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              New Rule
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="p-8">
+        <!-- Tabs -->
+        <!-- ANNOTATION: Tab navigation between Rules and History -->
+        <div class="flex items-center gap-1 mb-8 border-b border-zinc-800">
+          <button class="px-4 py-3 text-zinc-50 border-b-2 border-blue-500 font-medium -mb-px">
+            Alert Rules
+          </button>
+          <button class="px-4 py-3 text-zinc-400 hover:text-zinc-50 transition-colors">
+            Alert History
+          </button>
+        </div>
+
+        <!-- Alert Rules Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <!-- CPU Alert Rule -->
+          <!-- ANNOTATION: Each rule card shows metric, threshold, channels, and controls -->
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-violet-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold">CPU Usage Alert</h3>
+                  <p class="text-xs text-zinc-500">Triggers when CPU exceeds threshold</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Active Toggle -->
+                <button class="relative w-11 h-6 bg-green-600 rounded-full transition-colors">
+                  <span class="absolute top-1 right-1 w-4 h-4 bg-white rounded-full transition-transform"></span>
+                </button>
+                <!-- Edit Button -->
+                <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Rule Details -->
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Condition</span>
+                <span class="text-sm font-mono">CPU &gt; <span class="text-amber-500">90%</span></span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Cooldown</span>
+                <span class="text-sm font-mono">5 minutes</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-zinc-400">Notify via</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Email</span>
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Telegram</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Last Triggered -->
+            <div class="flex items-center gap-2 text-xs text-zinc-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Last triggered: <span class="text-zinc-400">2 hours ago</span>
+            </div>
+          </div>
+
+          <!-- RAM Alert Rule -->
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold">Memory Usage Alert</h3>
+                  <p class="text-xs text-zinc-500">Triggers when RAM exceeds threshold</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="relative w-11 h-6 bg-green-600 rounded-full transition-colors">
+                  <span class="absolute top-1 right-1 w-4 h-4 bg-white rounded-full transition-transform"></span>
+                </button>
+                <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Condition</span>
+                <span class="text-sm font-mono">RAM &gt; <span class="text-amber-500">85%</span></span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Cooldown</span>
+                <span class="text-sm font-mono">10 minutes</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-zinc-400">Notify via</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Email</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-zinc-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Last triggered: <span class="text-zinc-400">Never</span>
+            </div>
+          </div>
+
+          <!-- Disk Alert Rule -->
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold">Disk Usage Alert</h3>
+                  <p class="text-xs text-zinc-500">Triggers when disk space is low</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="relative w-11 h-6 bg-green-600 rounded-full transition-colors">
+                  <span class="absolute top-1 right-1 w-4 h-4 bg-white rounded-full transition-transform"></span>
+                </button>
+                <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Condition</span>
+                <span class="text-sm font-mono">Disk &gt; <span class="text-red-500">80%</span></span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Cooldown</span>
+                <span class="text-sm font-mono">30 minutes</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-zinc-400">Notify via</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Email</span>
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Telegram</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-amber-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              Currently active - threshold exceeded
+            </div>
+          </div>
+
+          <!-- Container Down Alert -->
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 opacity-60">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold">Container Down Alert</h3>
+                  <p class="text-xs text-zinc-500">Triggers when a container stops</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Disabled Toggle -->
+                <button class="relative w-11 h-6 bg-zinc-700 rounded-full transition-colors">
+                  <span class="absolute top-1 left-1 w-4 h-4 bg-zinc-400 rounded-full transition-transform"></span>
+                </button>
+                <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Condition</span>
+                <span class="text-sm">Container status = <span class="text-red-400">stopped/exited</span></span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-zinc-800">
+                <span class="text-sm text-zinc-400">Cooldown</span>
+                <span class="text-sm font-mono">1 minute</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-zinc-400">Notify via</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-300 rounded">Telegram</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-zinc-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+              </svg>
+              Rule disabled
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert History Section -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl">
+          <div class="flex items-center justify-between p-6 border-b border-zinc-800">
+            <h2 class="text-lg font-semibold">Recent Alert History</h2>
+            <div class="flex items-center gap-3">
+              <!-- Filter -->
+              <select class="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option>All Types</option>
+                <option>CPU</option>
+                <option>RAM</option>
+                <option>Disk</option>
+                <option>Container</option>
+              </select>
+              <!-- Date Range -->
+              <select class="px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option>Last 24 hours</option>
+                <option>Last 7 days</option>
+                <option>Last 30 days</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Alert Timeline -->
+          <!-- ANNOTATION: Timeline view of alert history with status indicators -->
+          <div class="divide-y divide-zinc-800">
+            <!-- Critical Alert -->
+            <div class="p-4 hover:bg-zinc-800/50 transition-colors">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">Disk Usage Critical</span>
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/10 text-red-500">Critical</span>
+                  </div>
+                  <p class="text-sm text-zinc-400 mb-2">
+                    Disk usage exceeded threshold: <span class="font-mono text-red-400">89%</span> &gt; 80%
+                  </p>
+                  <div class="flex items-center gap-4 text-xs text-zinc-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Today at 15:42
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                      </svg>
+                      Email sent
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                      </svg>
+                      Telegram sent
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0">
+                  <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-700 rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Warning Alert -->
+            <div class="p-4 hover:bg-zinc-800/50 transition-colors">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">CPU Usage Warning</span>
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/10 text-amber-500">Warning</span>
+                  </div>
+                  <p class="text-sm text-zinc-400 mb-2">
+                    CPU usage exceeded threshold: <span class="font-mono text-amber-400">92%</span> &gt; 90%
+                  </p>
+                  <div class="flex items-center gap-4 text-xs text-zinc-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Today at 13:28
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                      </svg>
+                      Email sent
+                    </span>
+                    <span class="flex items-center gap-1 text-green-500">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Resolved
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0">
+                  <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-700 rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info Alert -->
+            <div class="p-4 hover:bg-zinc-800/50 transition-colors">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">Container Restarted</span>
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-500/10 text-blue-500">Info</span>
+                  </div>
+                  <p class="text-sm text-zinc-400 mb-2">
+                    Container <span class="font-mono text-zinc-300">nginx-proxy</span> was restarted
+                  </p>
+                  <div class="flex items-center gap-4 text-xs text-zinc-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Yesterday at 22:15
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                      </svg>
+                      Telegram sent
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0">
+                  <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-700 rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- More Alerts -->
+            <div class="p-4 hover:bg-zinc-800/50 transition-colors">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium">CPU Usage Warning</span>
+                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/10 text-amber-500">Warning</span>
+                  </div>
+                  <p class="text-sm text-zinc-400 mb-2">
+                    CPU usage exceeded threshold: <span class="font-mono text-amber-400">95%</span> &gt; 90%
+                  </p>
+                  <div class="flex items-center gap-4 text-xs text-zinc-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Dec 21 at 08:45
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                      </svg>
+                      Email sent
+                    </span>
+                    <span class="flex items-center gap-1 text-green-500">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Resolved
+                    </span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0">
+                  <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-700 rounded-lg transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Load More -->
+          <div class="p-4 border-t border-zinc-800 text-center">
+            <button class="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+              Load more alerts
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- New Rule Modal (Hidden by default) -->
+  <!-- ANNOTATION: Modal for creating/editing alert rules -->
+  <div class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold">Create Alert Rule</h3>
+        <button class="p-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form class="space-y-4">
+        <!-- Metric Selection -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-zinc-300">Metric</label>
+          <select class="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>CPU Usage</option>
+            <option>Memory Usage</option>
+            <option>Disk Usage</option>
+            <option>Container Status</option>
+          </select>
+        </div>
+
+        <!-- Operator & Threshold -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-zinc-300">Operator</label>
+            <select class="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option>&gt; Greater than</option>
+              <option>&lt; Less than</option>
+              <option>= Equal to</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-zinc-300">Threshold (%)</label>
+            <input type="number" value="90" class="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <!-- Cooldown -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-zinc-300">Cooldown (minutes)</label>
+          <input type="number" value="5" class="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <p class="text-xs text-zinc-500">Minimum time between repeated alerts</p>
+        </div>
+
+        <!-- Notification Channels -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-zinc-300">Notification Channels</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-lg cursor-pointer hover:border-zinc-600 transition-colors">
+              <input type="checkbox" checked class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500" />
+              <svg class="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+              <span class="text-sm">Email</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-700 rounded-lg cursor-pointer hover:border-zinc-600 transition-colors">
+              <input type="checkbox" class="w-4 h-4 bg-zinc-900 border-zinc-700 rounded text-blue-600 focus:ring-blue-500" />
+              <svg class="w-5 h-5 text-zinc-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+              </svg>
+              <span class="text-sm">Telegram</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4">
+          <button type="button" class="px-4 py-2 text-zinc-400 hover:text-zinc-50 hover:bg-zinc-800 rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+            Create Rule
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!--
+    DESIGN NOTES:
+    =============
+    Layout:
+    - Tab navigation between Rules and History
+    - Rule cards in 2-column grid
+    - History as timeline/list view
+
+    Alert Rules:
+    - Toggle switch for enable/disable
+    - Condition, cooldown, channels displayed
+    - Edit button for modifications
+    - Visual indication of active/triggered state
+
+    Alert History:
+    - Timeline with severity icons (red=critical, amber=warning, blue=info)
+    - Delivery status (email sent, telegram sent)
+    - Resolution status
+    - Filterable by type and date range
+
+    Modal:
+    - Form for creating/editing rules
+    - Metric selection, threshold, cooldown
+    - Checkbox notification channels
+  -->
+</body>
+</html>

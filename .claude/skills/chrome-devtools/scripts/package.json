@@ -6,7 +6,7 @@
   "scripts": {},
   "dependencies": {
     "debug": "^4.4.0",
-    "puppeteer": "^24.15.0",
+    "puppeteer": "^24.34.0",
     "sharp": "^0.33.5",
     "yargs": "^17.7.2"
   },

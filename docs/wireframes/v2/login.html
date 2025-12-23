@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - BimNext Server Monitor V2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Base gradient background */
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+    }
+
+    /* Animated gradient orbs */
+    .gradient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.5;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 600px;
+      height: 600px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      top: -200px;
+      left: -200px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      bottom: -150px;
+      right: -150px;
+      animation-delay: -5s;
+    }
+
+    .orb-3 {
+      width: 300px;
+      height: 300px;
+      background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+      }
+      25% {
+        transform: translate(30px, -30px) scale(1.05);
+      }
+      50% {
+        transform: translate(-20px, 20px) scale(0.95);
+      }
+      75% {
+        transform: translate(20px, 10px) scale(1.02);
+      }
+    }
+
+    /* Grid pattern overlay */
+    .grid-pattern {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* Glassmorphism card */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Input glow effect */
+    .input-glow:focus {
+      box-shadow:
+        0 0 0 2px rgba(99, 102, 241, 0.2),
+        0 0 20px rgba(99, 102, 241, 0.15);
+    }
+
+    /* Button gradient */
+    .btn-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      transition: all 0.3s ease;
+    }
+
+    .btn-gradient:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      box-shadow: 0 0 30px rgba(102, 126, 234, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Floating label animation */
+    .floating-label {
+      position: absolute;
+      left: 44px;
+      top: 50%;
+      transform: translateY(-50%);
+      transition: all 0.2s ease;
+      pointer-events: none;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .floating-input:focus + .floating-label,
+    .floating-input:not(:placeholder-shown) + .floating-label {
+      top: 0;
+      left: 12px;
+      font-size: 0.75rem;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 0 8px;
+      color: #818cf8;
+    }
+
+    /* Shimmer animation */
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    .shimmer {
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+      );
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    /* Pulse ring animation */
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.8);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: inherit;
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    /* Logo glow */
+    .logo-glow {
+      box-shadow:
+        0 0 40px rgba(102, 126, 234, 0.4),
+        0 0 80px rgba(102, 126, 234, 0.2);
+    }
+
+    /* Social button hover */
+    .social-btn {
+      transition: all 0.3s ease;
+    }
+
+    .social-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Checkbox custom style */
+    .custom-checkbox {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .custom-checkbox:checked {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: transparent;
+    }
+
+    .custom-checkbox:checked::after {
+      content: '';
+      display: block;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translate(3px, -1px);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased overflow-hidden">
+  <!--
+    WIREFRAME V2: Premium Login Page
+    ================================
+    Design Direction: Glassmorphism + Animated Background
+    Key Features:
+    - Animated gradient orbs
+    - Glass card with blur effect
+    - Floating labels
+    - Gradient buttons
+    - Premium hover states
+    - Grid pattern overlay
+  -->
+
+  <!-- Background Layer -->
+  <div class="fixed inset-0 overflow-hidden">
+    <!-- Gradient Orbs -->
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+
+    <!-- Grid Pattern -->
+    <div class="absolute inset-0 grid-pattern"></div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="relative min-h-screen flex items-center justify-center p-4 z-10">
+    <div class="w-full max-w-md">
+
+      <!-- Branding -->
+      <!-- ANNOTATION: Premium logo with glow effect and animated pulse -->
+      <div class="text-center mb-10">
+        <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 logo-glow mb-6">
+          <div class="absolute inset-0 rounded-2xl pulse-ring bg-gradient-to-br from-indigo-500/50 to-purple-600/50"></div>
+          <svg class="w-10 h-10 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+        </div>
+        <h1 class="text-3xl font-bold text-white mb-2">BimNext Monitor</h1>
+        <p class="text-white/50 text-sm">Premium server monitoring dashboard</p>
+      </div>
+
+      <!-- Login Card -->
+      <!-- ANNOTATION: Glassmorphism card with blur, transparency, and subtle borders -->
+      <div class="glass-card rounded-3xl p-8">
+        <div class="text-center mb-8">
+          <h2 class="text-xl font-semibold text-white mb-1">Welcome back</h2>
+          <p class="text-white/40 text-sm">Sign in to your account to continue</p>
+        </div>
+
+        <!-- Login Form -->
+        <form class="space-y-6">
+          <!-- Email Field with Floating Label -->
+          <!-- ANNOTATION: Modern floating label input with icon and glow focus -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+              <svg class="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <input
+              type="email"
+              id="email"
+              placeholder=" "
+              class="floating-input w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-indigo-500/50 input-glow transition-all"
+            />
+            <label for="email" class="floating-label">Email address</label>
+          </div>
+
+          <!-- Password Field -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+              <svg class="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+            <input
+              type="password"
+              id="password"
+              placeholder=" "
+              class="floating-input w-full pl-12 pr-12 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-transparent focus:outline-none focus:border-indigo-500/50 input-glow transition-all"
+            />
+            <label for="password" class="floating-label">Password</label>
+            <!-- Password visibility toggle -->
+            <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Remember Me & Forgot Password -->
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <input type="checkbox" class="custom-checkbox" />
+              <span class="text-sm text-white/50 group-hover:text-white/70 transition-colors">Remember me</span>
+            </label>
+            <a href="#" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
+              Forgot password?
+            </a>
+          </div>
+
+          <!-- Submit Button -->
+          <!-- ANNOTATION: Gradient button with hover glow and transform -->
+          <button
+            type="submit"
+            class="btn-gradient w-full py-4 px-6 text-white font-semibold rounded-xl relative overflow-hidden"
+          >
+            <span class="relative z-10">Sign in</span>
+            <div class="absolute inset-0 shimmer"></div>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="relative my-8">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-white/10"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="px-4 text-sm text-white/30 bg-transparent backdrop-blur-sm">or continue with</span>
+          </div>
+        </div>
+
+        <!-- Social Login -->
+        <!-- ANNOTATION: Glass-style social buttons with hover effects -->
+        <div class="grid grid-cols-2 gap-4">
+          <button class="social-btn flex items-center justify-center gap-3 py-3.5 px-4 bg-white/5 border border-white/10 rounded-xl text-white font-medium">
+            <svg class="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub
+          </button>
+          <button class="social-btn flex items-center justify-center gap-3 py-3.5 px-4 bg-white/5 border border-white/10 rounded-xl text-white font-medium">
+            <svg class="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Google
+          </button>
+        </div>
+      </div>
+
+      <!-- Register Link -->
+      <p class="text-center text-sm text-white/40 mt-8">
+        Don't have an account?
+        <a href="#" class="text-indigo-400 hover:text-indigo-300 font-medium transition-colors ml-1">
+          Create account
+        </a>
+      </p>
+
+      <!-- Footer -->
+      <div class="text-center mt-8">
+        <p class="text-xs text-white/20">BimNext Monitor v2.0.0</p>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    DESIGN NOTES V2:
+    ================
+    Visual Style:
+    - Deep navy/purple gradient background (#0f0f23 -> #1a1a2e -> #16213e)
+    - Animated gradient orbs with blur for depth
+    - Grid pattern overlay for texture
+    - Glassmorphism card with backdrop-blur
+
+    Typography:
+    - Space Grotesk for modern, geometric feel
+    - JetBrains Mono for technical elements
+
+    Interactions:
+    - Floating labels animate up on focus/filled
+    - Gradient button with hover glow and shimmer
+    - Social buttons lift on hover
+    - Custom checkbox with gradient fill
+
+    Color Palette:
+    - Primary: Indigo-Purple gradient (#667eea -> #764ba2)
+    - Accent: Cyan-Blue gradient (#06b6d4 -> #3b82f6)
+    - Text: White with varying opacity
+
+    Inspiration: Linear, Vercel, Raycast
+  -->
+</body>
+</html>

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - BimNext Server Monitor V2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Base gradient background */
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+    }
+
+    /* Sidebar glass effect */
+    .sidebar-glass {
+      background: rgba(15, 15, 35, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Card glass effect */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Metric card gradients */
+    .metric-cpu {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.02) 100%);
+      border-color: rgba(139, 92, 246, 0.2);
+    }
+
+    .metric-ram {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.02) 100%);
+      border-color: rgba(6, 182, 212, 0.2);
+    }
+
+    .metric-disk {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .metric-network {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    /* Circular gauge animation */
+    @keyframes gauge-fill {
+      from { stroke-dashoffset: 251.2; }
+    }
+
+    .gauge-progress {
+      animation: gauge-fill 1.5s ease-out;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+
+    /* Gauge glow */
+    .gauge-glow {
+      filter: drop-shadow(0 0 15px currentColor);
+    }
+
+    /* Counter animation */
+    @keyframes count-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .counter-value {
+      animation: count-up 0.5s ease-out;
+    }
+
+    /* Live pulse */
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .live-indicator {
+      animation: live-pulse 2s ease-in-out infinite;
+    }
+
+    /* Chart gradient fill */
+    .chart-gradient-cpu { fill: url(#cpuGradient); }
+    .chart-gradient-ram { fill: url(#ramGradient); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+    /* Nav item active */
+    .nav-active {
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, transparent 100%);
+      border-left: 2px solid #8b5cf6;
+    }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stat card hover glow */
+    .stat-card {
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+    }
+
+    /* Header blur */
+    .header-blur {
+      background: rgba(15, 15, 35, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Container card mini */
+    .container-mini {
+      transition: all 0.3s ease;
+    }
+
+    .container-mini:hover {
+      transform: scale(1.02);
+    }
+
+    /* Animated border gradient */
+    @keyframes border-rotate {
+      from { --angle: 0deg; }
+      to { --angle: 360deg; }
+    }
+
+    /* Status glow */
+    .status-running {
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    }
+
+    .status-warning {
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+
+    /* Quick stat shimmer */
+    @keyframes shimmer-stat {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .shimmer-stat {
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.05),
+        transparent
+      );
+      background-size: 200% 100%;
+      animation: shimmer-stat 3s infinite;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-white overflow-x-hidden">
+  <!--
+    WIREFRAME V2: Premium Dashboard
+    ===============================
+    Design Direction: Premium SaaS Dashboard (Linear/Vercel inspired)
+    Key Features:
+    - Glass sidebar with blur
+    - Gradient metric cards
+    - Animated circular gauges with glow
+    - Beautiful area charts
+    - Animated stats counters
+    - Container overview with glass cards
+  -->
+
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <!-- ANNOTATION: Glassmorphism sidebar with gradient active states -->
+    <aside class="fixed inset-y-0 left-0 w-64 sidebar-glass flex flex-col z-20">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 px-6 py-6">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-white">BimNext</span>
+          <span class="text-xs text-white/40 block">Server Monitor</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-4">
+        <div class="space-y-1">
+          <!-- Active: Dashboard -->
+          <a href="dashboard.html" class="nav-active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+            <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+            </svg>
+            Dashboard
+          </a>
+
+          <a href="containers.html" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            Containers
+            <span class="ml-auto px-2 py-0.5 text-xs font-medium bg-white/10 text-white/60 rounded-full">8</span>
+          </a>
+
+          <a href="alerts.html" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            Alerts
+            <span class="ml-auto w-2 h-2 bg-amber-500 rounded-full status-warning"></span>
+          </a>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-white/5">
+          <a href="#" class="flex items-center gap-3 px-4 py-3 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Settings
+          </a>
+        </div>
+      </nav>
+
+      <!-- User Profile -->
+      <div class="p-4 mx-3 mb-4 rounded-xl bg-white/5 border border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-medium shadow-lg shadow-violet-500/20">
+            AD
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate">Admin User</div>
+            <div class="text-xs text-white/40 truncate">admin@bimnext.com</div>
+          </div>
+          <button class="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64">
+      <!-- Header -->
+      <!-- ANNOTATION: Sticky header with blur effect and live indicator -->
+      <header class="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold">Dashboard</h1>
+            <p class="text-sm text-white/40">Real-time server monitoring</p>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <!-- Live Indicator -->
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full live-indicator status-running"></span>
+              <span class="text-sm text-emerald-400 font-medium">Live</span>
+            </div>
+
+            <!-- Time Range -->
+            <select class="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer">
+              <option>Last 15 minutes</option>
+              <option>Last 1 hour</option>
+              <option>Last 6 hours</option>
+              <option>Last 24 hours</option>
+            </select>
+
+            <!-- Refresh -->
+            <button class="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dashboard Content -->
+      <div class="p-8">
+        <!-- Metric Cards -->
+        <!-- ANNOTATION: Premium metric cards with gradient backgrounds and animated gauges -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+
+          <!-- CPU Card -->
+          <div class="glass-card metric-cpu rounded-2xl p-6 stat-card">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white/60">CPU</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-emerald-500 status-running"></span>
+            </div>
+
+            <!-- Premium Circular Gauge -->
+            <div class="relative w-32 h-32 mx-auto mb-4">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <!-- Background ring -->
+                <circle cx="50" cy="50" r="42" stroke-width="6" class="stroke-white/5 fill-none"/>
+                <!-- Progress ring with glow -->
+                <circle cx="50" cy="50" r="42" stroke-width="6" stroke-dasharray="263.89" stroke-dashoffset="52.78" stroke-linecap="round" class="stroke-violet-500 fill-none gauge-progress gauge-glow"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono text-3xl font-bold counter-value">80</span>
+                <span class="text-xs text-white/40">percent</span>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <p class="text-xs text-white/40">8 cores / 16 threads</p>
+            </div>
+          </div>
+
+          <!-- RAM Card -->
+          <div class="glass-card metric-ram rounded-2xl p-6 stat-card">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white/60">Memory</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-emerald-500 status-running"></span>
+            </div>
+
+            <div class="relative w-32 h-32 mx-auto mb-4">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke-width="6" class="stroke-white/5 fill-none"/>
+                <circle cx="50" cy="50" r="42" stroke-width="6" stroke-dasharray="263.89" stroke-dashoffset="92.36" stroke-linecap="round" class="stroke-cyan-500 fill-none gauge-progress gauge-glow"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono text-3xl font-bold counter-value">65</span>
+                <span class="text-xs text-white/40">percent</span>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <p class="text-xs text-white/40">10.4 GB / 16 GB</p>
+            </div>
+          </div>
+
+          <!-- Disk Card -->
+          <div class="glass-card metric-disk rounded-2xl p-6 stat-card">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white/60">Disk</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-amber-500 status-warning"></span>
+            </div>
+
+            <div class="relative w-32 h-32 mx-auto mb-4">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke-width="6" class="stroke-white/5 fill-none"/>
+                <circle cx="50" cy="50" r="42" stroke-width="6" stroke-dasharray="263.89" stroke-dashoffset="29.03" stroke-linecap="round" class="stroke-amber-500 fill-none gauge-progress gauge-glow"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono text-3xl font-bold text-amber-500 counter-value">89</span>
+                <span class="text-xs text-white/40">percent</span>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <p class="text-xs text-white/40">456 GB / 512 GB</p>
+            </div>
+          </div>
+
+          <!-- Network Card -->
+          <div class="glass-card metric-network rounded-2xl p-6 stat-card">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-white/60">Network</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-emerald-500 status-running"></span>
+            </div>
+
+            <div class="flex flex-col items-center justify-center h-32 mb-4 space-y-4">
+              <!-- Upload -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
+                  </svg>
+                </div>
+                <div>
+                  <span class="font-mono text-xl font-bold counter-value">125</span>
+                  <span class="text-sm text-white/40 ml-1">MB/s</span>
+                </div>
+              </div>
+              <!-- Download -->
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path>
+                  </svg>
+                </div>
+                <div>
+                  <span class="font-mono text-xl font-bold counter-value">340</span>
+                  <span class="text-sm text-white/40 ml-1">MB/s</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <p class="text-xs text-white/40">eth0 - 1 Gbps</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+          <!-- Main Chart -->
+          <!-- ANNOTATION: Premium area chart with gradient fills -->
+          <div class="xl:col-span-2 glass-card rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold">System Performance</h3>
+              <div class="flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-violet-500"></span>
+                  <span class="text-white/60">CPU</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-cyan-500"></span>
+                  <span class="text-white/60">RAM</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                  <span class="text-white/60">Disk</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart Area -->
+            <div class="h-64 relative">
+              <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 256">
+                <!-- Gradients -->
+                <defs>
+                  <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(139, 92, 246, 0.3)"/>
+                    <stop offset="100%" stop-color="rgba(139, 92, 246, 0)"/>
+                  </linearGradient>
+                  <linearGradient id="ramGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(6, 182, 212, 0.3)"/>
+                    <stop offset="100%" stop-color="rgba(6, 182, 212, 0)"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Grid lines -->
+                <g class="stroke-white/5">
+                  <line x1="0" y1="64" x2="800" y2="64"/>
+                  <line x1="0" y1="128" x2="800" y2="128"/>
+                  <line x1="0" y1="192" x2="800" y2="192"/>
+                </g>
+
+                <!-- CPU Area -->
+                <path d="M0,180 Q100,140 200,160 T400,120 T600,140 T800,100 V256 H0 Z" fill="url(#cpuGradient)"/>
+                <path d="M0,180 Q100,140 200,160 T400,120 T600,140 T800,100" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+
+                <!-- RAM Area -->
+                <path d="M0,200 Q100,190 200,195 T400,180 T600,185 T800,180 V256 H0 Z" fill="url(#ramGradient)"/>
+                <path d="M0,200 Q100,190 200,195 T400,180 T600,185 T800,180" fill="none" stroke="#06b6d4" stroke-width="2"/>
+
+                <!-- Disk Line -->
+                <path d="M0,50 Q100,48 200,52 T400,50 T600,45 T800,40" fill="none" stroke="#f59e0b" stroke-width="2"/>
+              </svg>
+
+              <!-- Y-axis labels -->
+              <div class="absolute top-0 left-0 h-full flex flex-col justify-between py-2 text-xs text-white/30 font-mono">
+                <span>100%</span>
+                <span>75%</span>
+                <span>50%</span>
+                <span>25%</span>
+                <span>0%</span>
+              </div>
+            </div>
+
+            <!-- X-axis labels -->
+            <div class="flex justify-between mt-4 text-xs text-white/30 font-mono px-8">
+              <span>15:00</span>
+              <span>15:05</span>
+              <span>15:10</span>
+              <span>15:15</span>
+            </div>
+          </div>
+
+          <!-- Quick Stats -->
+          <!-- ANNOTATION: Premium stat cards with icons and values -->
+          <div class="glass-card rounded-2xl p-6">
+            <h3 class="text-lg font-semibold mb-6">Quick Stats</h3>
+
+            <div class="space-y-4">
+              <!-- Uptime -->
+              <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 shimmer-stat">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                  <span class="text-white/60">Uptime</span>
+                </div>
+                <span class="font-mono font-semibold">45d 12h</span>
+              </div>
+
+              <!-- Load Average -->
+              <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 shimmer-stat">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                  </div>
+                  <span class="text-white/60">Load Avg</span>
+                </div>
+                <span class="font-mono font-semibold">2.45</span>
+              </div>
+
+              <!-- Processes -->
+              <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 shimmer-stat">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                    </svg>
+                  </div>
+                  <span class="text-white/60">Processes</span>
+                </div>
+                <span class="font-mono font-semibold">247</span>
+              </div>
+
+              <!-- Containers -->
+              <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 shimmer-stat">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                  </div>
+                  <span class="text-white/60">Containers</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="font-mono font-semibold text-emerald-400">6</span>
+                  <span class="text-white/30">/</span>
+                  <span class="font-mono text-white/40">8</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Container Overview -->
+        <!-- ANNOTATION: Modern container cards with glass effect and status indicators -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-semibold">Active Containers</h3>
+            <a href="containers.html" class="text-sm text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+              View all
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </a>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Container: nginx -->
+            <div class="container-mini p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">nginx</div>
+                  <div class="text-xs text-white/40 font-mono truncate">nginx:latest</div>
+                </div>
+                <span class="w-2 h-2 bg-emerald-500 rounded-full status-running"></span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-white/40">
+                <span>CPU: 2.3%</span>
+                <span>RAM: 128MB</span>
+              </div>
+            </div>
+
+            <!-- Container: postgres -->
+            <div class="container-mini p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">postgres</div>
+                  <div class="text-xs text-white/40 font-mono truncate">postgres:16</div>
+                </div>
+                <span class="w-2 h-2 bg-emerald-500 rounded-full status-running"></span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-white/40">
+                <span>CPU: 8.7%</span>
+                <span>RAM: 512MB</span>
+              </div>
+            </div>
+
+            <!-- Container: redis -->
+            <div class="container-mini p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">redis</div>
+                  <div class="text-xs text-white/40 font-mono truncate">redis:7-alpine</div>
+                </div>
+                <span class="w-2 h-2 bg-emerald-500 rounded-full status-running"></span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-white/40">
+                <span>CPU: 0.5%</span>
+                <span>RAM: 64MB</span>
+              </div>
+            </div>
+
+            <!-- Container: test-app (stopped) -->
+            <div class="container-mini p-4 rounded-xl bg-white/5 border border-white/5 opacity-50 cursor-pointer">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">test-app</div>
+                  <div class="text-xs text-white/40 font-mono truncate">node:20-alpine</div>
+                </div>
+                <span class="w-2 h-2 bg-white/30 rounded-full"></span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-white/30">
+                <span>Stopped</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!--
+    DESIGN NOTES V2:
+    ================
+    Visual Style:
+    - Deep navy/purple gradient background
+    - Glassmorphism cards with subtle gradients per metric type
+    - Animated circular gauges with glow effects
+    - Gradient area charts with smooth curves
+
+    Key Improvements over V1:
+    - Glass sidebar with blur effect
+    - Metric cards have unique gradient backgrounds
+    - Gauge rings have drop-shadow glow
+    - Premium stat cards with shimmer animation
+    - Container cards with hover states
+
+    Animations:
+    - Gauge fill animation on load
+    - Counter value fade-in
+    - Live pulse indicator
+    - Stat card shimmer effect
+    - Hover transforms on cards
+
+    Color Palette:
+    - CPU: Violet (#8b5cf6)
+    - RAM: Cyan (#06b6d4)
+    - Disk: Amber (#f59e0b)
+    - Network: Emerald (#10b981)
+    - Status Running: Emerald with glow
+    - Status Warning: Amber with glow
+
+    Inspiration: Linear, Vercel, Raycast
+  -->
+</body>
+</html>

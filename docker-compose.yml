@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bimnext_postgres
+    environment:
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: M0n!t0r_D3v@2025
+      POSTGRES_DB: bimnext_monitor
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor -d bimnext_monitor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
