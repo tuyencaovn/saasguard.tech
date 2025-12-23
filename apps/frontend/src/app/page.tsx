@@ -11,7 +11,6 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface MetricsDataPoint {
-  time: string;
   timestamp: number;
   cpu: number;
   ram: number;
@@ -21,10 +20,10 @@ interface MetricsDataPoint {
 type TimeRange = '15m' | '1h' | '6h' | '24h';
 
 const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; maxPoints: number; sampleInterval: number }> = {
-  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 30, sampleInterval: 30 * 1000 }, // 30s
-  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 30, sampleInterval: 2 * 60 * 1000 }, // 2m
-  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 36, sampleInterval: 10 * 60 * 1000 }, // 10m
-  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 48, sampleInterval: 30 * 60 * 1000 }, // 30m
+  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 60, sampleInterval: 15 * 1000 }, // 15s
+  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 60, sampleInterval: 60 * 1000 }, // 1m
+  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 72, sampleInterval: 5 * 60 * 1000 }, // 5m
+  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
 };
 
 export default function DashboardPage() {
@@ -51,11 +50,6 @@ export default function DashboardPage() {
         }
 
         const dataPoint: MetricsDataPoint = {
-          time: new Date(metrics.timestamp).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          }),
           timestamp: now,
           cpu: metrics.cpu.usage,
           ram: metrics.ram.usagePercent,
@@ -214,7 +208,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <PerformanceChart data={metricsHistory} />
+                <PerformanceChart data={metricsHistory} timeRange={timeRange} />
               </div>
 
               {/* Quick Stats */}

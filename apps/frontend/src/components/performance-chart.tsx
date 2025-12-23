@@ -12,22 +12,78 @@ import {
 } from 'recharts';
 
 interface MetricsDataPoint {
-  time: string;
+  timestamp: number;
   cpu: number;
   ram: number;
   disk: number;
 }
 
+type TimeRange = '15m' | '1h' | '6h' | '24h';
+
+// Minutes for each time range
+const TIME_RANGE_MINUTES: Record<TimeRange, number> = {
+  '15m': 15,
+  '1h': 60,
+  '6h': 360,
+  '24h': 1440,
+};
+
+// Tick interval in minutes for each time range (to get ~4 ticks)
+const TICK_INTERVALS: Record<TimeRange, number> = {
+  '15m': 5, // 5 min intervals
+  '1h': 15, // 15 min intervals
+  '6h': 90, // 1.5h intervals
+  '24h': 360, // 6h intervals
+};
+
 interface PerformanceChartProps {
   data: MetricsDataPoint[];
+  timeRange: TimeRange;
 }
 
-export function PerformanceChart({ data }: PerformanceChartProps) {
-  // Calculate tick interval to show max 6 labels on X-axis
-  const tickInterval = useMemo(() => {
-    if (data.length <= 6) return 0;
-    return Math.ceil(data.length / 6);
-  }, [data]);
+// Format timestamp to HH:MM
+function formatTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+// Generate fixed tick values based on current time and time range
+function generateTicks(timeRange: TimeRange): number[] {
+  const now = Date.now();
+  const intervalMs = TICK_INTERVALS[timeRange] * 60 * 1000;
+  const rangeMs = TIME_RANGE_MINUTES[timeRange] * 60 * 1000;
+
+  // Round current time down to nearest interval
+  const roundedNow = Math.floor(now / intervalMs) * intervalMs;
+
+  // Generate ticks from (now - range) to now
+  const ticks: number[] = [];
+  const startTime = now - rangeMs;
+
+  for (let t = roundedNow; t >= startTime; t -= intervalMs) {
+    ticks.unshift(t);
+  }
+
+  // Add next upcoming tick
+  ticks.push(roundedNow + intervalMs);
+
+  return ticks;
+}
+
+export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
+  const { ticks, domain } = useMemo(() => {
+    const tickValues = generateTicks(timeRange);
+    const rangeMs = TIME_RANGE_MINUTES[timeRange] * 60 * 1000;
+    const now = Date.now();
+
+    return {
+      ticks: tickValues,
+      domain: [now - rangeMs, now] as [number, number],
+    };
+  }, [timeRange]);
 
   if (data.length === 0) {
     return (
@@ -43,12 +99,15 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
         <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
           <XAxis
-            dataKey="time"
+            dataKey="timestamp"
+            type="number"
+            domain={domain}
+            ticks={ticks}
+            tickFormatter={formatTime}
             stroke="#71717a"
             fontSize={11}
             tickLine={false}
             axisLine={false}
-            interval={tickInterval}
           />
           <YAxis
             stroke="#71717a"
@@ -66,6 +125,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
               fontSize: '12px',
             }}
             labelStyle={{ color: '#a1a1aa' }}
+            labelFormatter={(value) => formatTime(value as number)}
             formatter={(value: number, name: string) => [
               `${value.toFixed(1)}%`,
               name.toUpperCase(),
