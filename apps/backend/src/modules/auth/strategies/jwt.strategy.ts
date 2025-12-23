@@ -17,6 +17,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
   ) {
+    const secret =
+      configService.get<string>('JWT_SECRET') ||
+      process.env.JWT_SECRET ||
+      'default-dev-secret-change-in-production';
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // Extract JWT from HTTP-only cookie
@@ -25,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: secret,
     });
   }
 

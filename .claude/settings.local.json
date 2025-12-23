@@ -33,7 +33,8 @@
       "Bash(npx tsc:*)",
       "Bash(lsof:*)",
       "Bash(pm2 list:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pnpm seed:admin:*)"
     ]
   }
 }
