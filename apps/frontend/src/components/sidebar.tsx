@@ -12,6 +12,7 @@ import {
   Server,
   LogOut,
   Users,
+  Terminal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -26,7 +27,8 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Containers', href: '/containers', icon: Box, badge: '8' },
+  { name: 'Containers', href: '/containers', icon: Box },
+  { name: 'PM2', href: '/pm2', icon: Terminal },
   { name: 'Alerts', href: '/alerts', icon: Bell, hasNotification: true },
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];

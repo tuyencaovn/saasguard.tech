@@ -4,10 +4,11 @@ Server monitoring web application with real-time metrics, Docker monitoring, and
 
 ## Features
 
-- **Real-time Metrics**: CPU, RAM, Disk usage via WebSocket
-- **Docker Monitoring**: Container status, events, resource usage
+- **Real-time Metrics**: CPU, RAM, Disk, Network usage via WebSocket
+- **Docker Monitoring**: Container status, events, Start/Stop/Restart, logs
+- **PM2 Monitoring**: Process management, CPU/Memory stats, Start/Stop/Restart, logs
 - **Alert System**: Email (SendGrid) & Telegram notifications
-- **User Authentication**: JWT-based auth with role management
+- **User Authentication**: JWT-based auth with role management (Admin/Viewer)
 
 ## Tech Stack
 

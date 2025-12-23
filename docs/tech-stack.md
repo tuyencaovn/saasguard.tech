@@ -1,7 +1,7 @@
 # Tech Stack - BimNext Server Monitor
 
 **Project:** Server Monitoring Web Application
-**Date:** 2025-12-23
+**Updated:** 2025-12-24
 
 ## Overview
 
@@ -23,8 +23,9 @@ Full-stack TypeScript application for real-time server monitoring with alert not
 
 | Package | Purpose |
 |---------|---------|
-| `systeminformation` | System metrics (CPU/RAM/Disk) |
+| `systeminformation` | System metrics (CPU/RAM/Disk/Network) |
 | `dockerode` | Docker container monitoring |
+| `pm2` | PM2 process management |
 | `@nestjs/websockets` | WebSocket gateway |
 | `socket.io` | Real-time communication |
 | `@sendgrid/mail` | Email notifications |
@@ -74,14 +75,22 @@ bimnext_monitor/
 - **Library:** dockerode
 - **Connection:** Unix socket `/var/run/docker.sock`
 - **Events:** Real-time stream for start/stop/restart
+- **Actions:** Start, Stop, Restart, View Logs
 
-### 5. Alert System
+### 5. PM2 Monitoring
+- **Library:** pm2 (programmatic API)
+- **Connection:** Local PM2 daemon
+- **Data:** Process list, CPU, Memory, Uptime, Restarts
+- **Actions:** Start, Stop, Restart, View Logs
+- **Refresh:** 5-second polling interval
+
+### 6. Alert System
 - **Throttling:** Redis-backed deduplication
 - **Channels:** Email (SendGrid) + Telegram
 - **Configuration:** Database-stored thresholds
 - **History:** PostgreSQL with 90-day retention
 
-### 6. Authentication
+### 7. Authentication
 - **Strategy:** JWT with refresh tokens
 - **Storage:** HTTP-only cookies
 - **Session:** 24h access token, 7d refresh token
@@ -148,6 +157,7 @@ pnpm db:down      # Stop PostgreSQL
 
 ### Dashboard
 - **Real-time metrics**: CPU, RAM, Disk usage with circular gauges
+- **Network stats**: Upload/Download speeds (MB/s)
 - **System uptime**: Server uptime display (days/hours/minutes)
 - **Performance chart**: Line chart with CPU/RAM/Disk history
   - Time range filter: 15m, 1h, 6h, 24h
@@ -163,8 +173,25 @@ pnpm db:down      # Stop PostgreSQL
 - **Status filter**: All, Running, Stopped, Error
 - **Search**: Filter by container name or image
 - **Container uptime**: Shows how long container has been running
-- **Actions**: Start, Stop, Restart buttons
+- **Actions**: Start, Stop, Restart buttons (Admin only)
+- **Logs**: View container logs with tail selector
 - **Recent events**: Docker events (start/stop/die/create)
+
+### PM2 Page
+- **Process list**: All PM2 processes with status
+- **View modes**: Grid and List view toggle
+- **Status filter**: All, Online, Stopped, Errored
+- **Search**: Filter by process name
+- **Process stats**: CPU %, Memory, Uptime, Restarts
+- **Actions**: Start, Stop, Restart buttons (Admin only)
+- **Logs**: View process logs with tail selector
+- **Auto-refresh**: 5-second polling interval
+
+### Authentication
+- **Login page**: Email/password authentication
+- **Role-based access**: Admin and Viewer roles
+- **JWT cookies**: HTTP-only secure cookies
+- **Invitation system**: Admin invites new users via email
 
 ### Alerts Page (Planned)
 - Alert rules configuration

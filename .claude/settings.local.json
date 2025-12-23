@@ -38,7 +38,9 @@
       "Bash(TOKEN=\"56f3783f5994059e6c3280cf1018d082dd4f110cf8b31897d5a58dec3a8a085f\")",
       "Bash(node navigate.js:*)",
       "Bash(node fill.js:*)",
-      "Bash(node click.js:*)"
+      "Bash(node click.js:*)",
+      "Skill(plan:fast)",
+      "Bash(find:*)"
     ]
   }
 }

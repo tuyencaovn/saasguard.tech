@@ -61,3 +61,14 @@ export interface DockerEvent {
   containerName: string;
   timestamp: string;
 }
+
+export interface PM2Process {
+  pm_id: number;
+  name: string;
+  status: 'online' | 'stopped' | 'errored' | 'launching';
+  cpu: number;
+  memory: number;
+  uptime: number | null;
+  restarts: number;
+  pid?: number;
+}

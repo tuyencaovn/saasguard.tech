@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { DockerModule } from './modules/docker/docker.module';
+import { PM2Module } from './modules/pm2/pm2.module';
 import { GatewaysModule } from './gateways/gateways.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
@@ -45,6 +46,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     AlertsModule,
     MetricsModule,
     DockerModule,
+    PM2Module,
     GatewaysModule,
   ],
   controllers: [AppController],
