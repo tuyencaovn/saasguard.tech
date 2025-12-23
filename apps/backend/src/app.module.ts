@@ -12,6 +12,7 @@ import { MetricsModule } from './modules/metrics/metrics.module';
 import { DockerModule } from './modules/docker/docker.module';
 import { GatewaysModule } from './gateways/gateways.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 
@@ -39,6 +40,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     AuthModule,
+    InvitationsModule,
     UsersModule,
     AlertsModule,
     MetricsModule,
