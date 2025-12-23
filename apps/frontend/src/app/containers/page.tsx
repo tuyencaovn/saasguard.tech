@@ -53,7 +53,7 @@ const actionColors: Record<string, string> = {
 export default function ContainersPage() {
   const { containers, events, loading, refetch } = useDockerEvents();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
