@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { AuthGuard } from '@/components/auth-guard';
 
-const NO_SIDEBAR_PATHS = ['/login', '/set-password'];
+const NO_SIDEBAR_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password'];
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
