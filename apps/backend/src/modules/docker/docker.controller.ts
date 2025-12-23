@@ -8,10 +8,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DockerService } from './docker.service';
-import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @Controller('docker')
-@Public() // TODO: Remove after frontend auth implemented
 export class DockerController {
   constructor(private readonly dockerService: DockerService) {}
 
@@ -37,6 +37,7 @@ export class DockerController {
   }
 
   @Post('containers/:id/start')
+  @Roles(UserRole.ADMIN)
   async startContainer(@Param('id') id: string) {
     try {
       await this.dockerService.startContainer(id);
@@ -47,6 +48,7 @@ export class DockerController {
   }
 
   @Post('containers/:id/stop')
+  @Roles(UserRole.ADMIN)
   async stopContainer(@Param('id') id: string) {
     try {
       await this.dockerService.stopContainer(id);
@@ -57,6 +59,7 @@ export class DockerController {
   }
 
   @Post('containers/:id/restart')
+  @Roles(UserRole.ADMIN)
   async restartContainer(@Param('id') id: string) {
     try {
       await this.dockerService.restartContainer(id);

@@ -99,20 +99,22 @@ export function Sidebar() {
             })}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/5">
-          <Link
-            href="/settings"
-            className={cn(
-              'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
-              pathname === '/settings'
-                ? 'nav-active text-white'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
-            )}
-          >
-            <Settings className="w-5 h-5" />
-            Settings
-          </Link>
-        </div>
+        {user?.role === 'admin' && (
+          <div className="mt-8 pt-6 border-t border-white/5">
+            <Link
+              href="/settings"
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
+                pathname === '/settings'
+                  ? 'nav-active text-white'
+                  : 'text-white/50 hover:text-white hover:bg-white/5'
+              )}
+            >
+              <Settings className="w-5 h-5" />
+              Settings
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* User Profile */}

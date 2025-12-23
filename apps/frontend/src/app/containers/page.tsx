@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useDockerEvents } from '@/hooks/use-socket';
+import { useAuth } from '@/contexts/auth-context';
 import { ConnectionStatus } from '@/components/connection-status';
 import { formatTime, formatUptime } from '@/lib/utils';
 
@@ -52,6 +53,8 @@ const actionColors: Record<string, string> = {
 
 export default function ContainersPage() {
   const { containers, events, loading, refetch } = useDockerEvents();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,9 +256,11 @@ export default function ContainersPage() {
                     <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
                       Uptime
                     </th>
-                    <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
-                      Actions
-                    </th>
+                    {isAdmin && (
+                      <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -323,37 +328,39 @@ export default function ContainersPage() {
                             : '—'}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center justify-end gap-2">
-                          {container.state === 'running' ? (
+                      {isAdmin && (
+                        <td className="py-4 px-6">
+                          <div className="flex items-center justify-end gap-2">
+                            {container.state === 'running' ? (
+                              <button
+                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
+                                title="Stop"
+                              >
+                                <Square className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
+                                title="Start"
+                              >
+                                <Play className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
-                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
-                              title="Stop"
+                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
+                              title="Restart"
                             >
-                              <Square className="w-4 h-4" />
+                              <RotateCcw className="w-4 h-4" />
                             </button>
-                          ) : (
                             <button
-                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
-                              title="Start"
+                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
+                              title="More"
                             >
-                              <Play className="w-4 h-4" />
+                              <MoreVertical className="w-4 h-4" />
                             </button>
-                          )}
-                          <button
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
-                            title="Restart"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
-                            title="More"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -415,29 +422,31 @@ export default function ContainersPage() {
                     >
                       {container.state.charAt(0).toUpperCase() + container.state.slice(1)}
                     </span>
-                    <div className="flex items-center gap-1">
-                      {container.state === 'running' ? (
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        {container.state === 'running' ? (
+                          <button
+                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
+                            title="Stop"
+                          >
+                            <Square className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
+                            title="Start"
+                          >
+                            <Play className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
-                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
-                          title="Stop"
+                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
+                          title="Restart"
                         >
-                          <Square className="w-3.5 h-3.5" />
+                          <RotateCcw className="w-3.5 h-3.5" />
                         </button>
-                      ) : (
-                        <button
-                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
-                          title="Start"
-                        >
-                          <Play className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
-                        title="Restart"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

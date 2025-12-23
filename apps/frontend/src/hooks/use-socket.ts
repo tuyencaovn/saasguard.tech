@@ -67,11 +67,14 @@ export function useDockerEvents() {
 
   const fetchContainers = useCallback(async () => {
     try {
-      const res = await fetch(`${SOCKET_URL}/docker/containers`);
+      const res = await fetch(`${SOCKET_URL}/docker/containers`, {
+        credentials: 'include',
+      });
       const data = await res.json();
-      setContainers(data);
+      setContainers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch containers:', error);
+      setContainers([]);
     } finally {
       setLoading(false);
     }
