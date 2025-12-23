@@ -187,6 +187,34 @@ export class DockerService implements OnModuleInit {
   }
 
   /**
+   * Get container logs
+   */
+  async getContainerLogs(containerId: string, tail = 100): Promise<string> {
+    if (!this.docker || !this.isConnected) {
+      throw new Error('Docker not connected');
+    }
+    const container = this.docker.getContainer(containerId);
+    const logs = await container.logs({
+      stdout: true,
+      stderr: true,
+      tail,
+      timestamps: true,
+    });
+    // Remove Docker stream header bytes (8-byte prefix per line)
+    return logs
+      .toString('utf8')
+      .split('\n')
+      .map((line) => {
+        // Docker prepends 8 bytes of header to each line
+        if (line.length > 8) {
+          return line.substring(8);
+        }
+        return line;
+      })
+      .join('\n');
+  }
+
+  /**
    * Start listening to Docker events
    */
   private async startEventListener(): Promise<void> {

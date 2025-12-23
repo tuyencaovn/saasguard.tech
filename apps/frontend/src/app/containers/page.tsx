@@ -24,10 +24,14 @@ import {
   RefreshCw,
   LayoutGrid,
   List,
-  MoreVertical,
+  FileText,
   AlertTriangle,
   Timer,
+  Loader2,
 } from 'lucide-react';
+import { LogsModal } from '@/components/logs-modal';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'running' | 'stopped' | 'error';
@@ -59,6 +63,31 @@ export default function ContainersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [logsContainer, setLogsContainer] = useState<{ id: string; name: string } | null>(null);
+
+  // Container actions
+  const performContainerAction = useCallback(async (containerId: string, action: 'start' | 'stop' | 'restart') => {
+    setActionInProgress(`${containerId}-${action}`);
+    try {
+      const res = await fetch(`${API_URL}/docker/containers/${containerId}/${action}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || `Failed to ${action} container`);
+      }
+      // WebSocket will receive the event from backend
+      // Refetch containers after action
+      await refetch();
+    } catch (error) {
+      console.error(`Failed to ${action} container:`, error);
+      alert(error instanceof Error ? error.message : `Failed to ${action} container`);
+    } finally {
+      setActionInProgress(null);
+    }
+  }, [refetch]);
 
   // Filter containers based on status and search query
   const filteredContainers = useMemo(() => {
@@ -256,11 +285,9 @@ export default function ContainersPage() {
                     <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
                       Uptime
                     </th>
-                    {isAdmin && (
-                      <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
-                        Actions
-                      </th>
-                    )}
+                    <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
+                      {isAdmin ? 'Actions' : 'Logs'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -328,39 +355,60 @@ export default function ContainersPage() {
                             : '—'}
                         </span>
                       </td>
-                      {isAdmin && (
-                        <td className="py-4 px-6">
-                          <div className="flex items-center justify-end gap-2">
-                            {container.state === 'running' ? (
+                      <td className="py-4 px-6">
+                        <div className="flex items-center justify-end gap-2">
+                          {isAdmin && (
+                            <>
+                              {container.state === 'running' ? (
+                                <button
+                                  onClick={() => performContainerAction(container.id, 'stop')}
+                                  disabled={actionInProgress === `${container.id}-stop`}
+                                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
+                                  title="Stop"
+                                >
+                                  {actionInProgress === `${container.id}-stop` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Square className="w-4 h-4" />
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => performContainerAction(container.id, 'start')}
+                                  disabled={actionInProgress === `${container.id}-start`}
+                                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400 disabled:opacity-50"
+                                  title="Start"
+                                >
+                                  {actionInProgress === `${container.id}-start` ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Play className="w-4 h-4" />
+                                  )}
+                                </button>
+                              )}
                               <button
-                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
-                                title="Stop"
+                                onClick={() => performContainerAction(container.id, 'restart')}
+                                disabled={actionInProgress === `${container.id}-restart` || container.state !== 'running'}
+                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400 disabled:opacity-50"
+                                title="Restart"
                               >
-                                <Square className="w-4 h-4" />
+                                {actionInProgress === `${container.id}-restart` ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="w-4 h-4" />
+                                )}
                               </button>
-                            ) : (
-                              <button
-                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
-                                title="Start"
-                              >
-                                <Play className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
-                              title="Restart"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
-                              title="More"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                            </>
+                          )}
+                          <button
+                            onClick={() => setLogsContainer({ id: container.id, name: container.name })}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-violet-400"
+                            title="View logs"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -422,31 +470,58 @@ export default function ContainersPage() {
                     >
                       {container.state.charAt(0).toUpperCase() + container.state.slice(1)}
                     </span>
-                    {isAdmin && (
-                      <div className="flex items-center gap-1">
-                        {container.state === 'running' ? (
+                    <div className="flex items-center gap-1">
+                      {isAdmin && (
+                        <>
+                          {container.state === 'running' ? (
+                            <button
+                              onClick={() => performContainerAction(container.id, 'stop')}
+                              disabled={actionInProgress === `${container.id}-stop`}
+                              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
+                              title="Stop"
+                            >
+                              {actionInProgress === `${container.id}-stop` ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Square className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => performContainerAction(container.id, 'start')}
+                              disabled={actionInProgress === `${container.id}-start`}
+                              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400 disabled:opacity-50"
+                              title="Start"
+                            >
+                              {actionInProgress === `${container.id}-start` ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
                           <button
-                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400"
-                            title="Stop"
+                            onClick={() => performContainerAction(container.id, 'restart')}
+                            disabled={actionInProgress === `${container.id}-restart` || container.state !== 'running'}
+                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400 disabled:opacity-50"
+                            title="Restart"
                           >
-                            <Square className="w-3.5 h-3.5" />
+                            {actionInProgress === `${container.id}-restart` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            )}
                           </button>
-                        ) : (
-                          <button
-                            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-emerald-400"
-                            title="Start"
-                          >
-                            <Play className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400"
-                          title="Restart"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+                        </>
+                      )}
+                      <button
+                        onClick={() => setLogsContainer({ id: container.id, name: container.name })}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-violet-400"
+                        title="View logs"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -500,6 +575,14 @@ export default function ContainersPage() {
           )}
         </div>
       </div>
+
+      {/* Logs Modal */}
+      <LogsModal
+        containerId={logsContainer?.id || ''}
+        containerName={logsContainer?.name || ''}
+        isOpen={!!logsContainer}
+        onClose={() => setLogsContainer(null)}
+      />
     </div>
   );
 }

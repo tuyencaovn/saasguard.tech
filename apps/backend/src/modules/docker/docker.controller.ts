@@ -36,6 +36,20 @@ export class DockerController {
     return stats;
   }
 
+  @Get('containers/:id/logs')
+  async getContainerLogs(
+    @Param('id') id: string,
+    @Query('tail') tail?: string,
+  ) {
+    try {
+      const tailNum = tail ? parseInt(tail, 10) : 100;
+      const logs = await this.dockerService.getContainerLogs(id, tailNum);
+      return { logs };
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @Post('containers/:id/start')
   @Roles(UserRole.ADMIN)
   async startContainer(@Param('id') id: string) {

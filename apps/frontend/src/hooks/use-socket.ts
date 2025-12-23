@@ -80,6 +80,11 @@ export function useDockerEvents() {
     }
   }, []);
 
+  // Manually add an event (for immediate UI feedback)
+  const addEvent = useCallback((event: DockerEvent) => {
+    setEvents((prev) => [event, ...prev].slice(0, 50));
+  }, []);
+
   useEffect(() => {
     const socket = getSocket();
 
@@ -110,7 +115,7 @@ export function useDockerEvents() {
     };
   }, [fetchContainers]);
 
-  return { events, containers, loading, refetch: fetchContainers };
+  return { events, containers, loading, refetch: fetchContainers, addEvent };
 }
 
 export function useConnectionStatus() {
