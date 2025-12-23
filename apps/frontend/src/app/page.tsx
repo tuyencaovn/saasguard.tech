@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
@@ -12,21 +12,34 @@ import { cn } from '@/lib/utils';
 
 interface MetricsDataPoint {
   time: string;
+  timestamp: number;
   cpu: number;
   ram: number;
   disk: number;
 }
 
+type TimeRange = '15m' | '1h' | '6h' | '24h';
+
+const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; maxPoints: number }> = {
+  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 60 },
+  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 120 },
+  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 180 },
+  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 288 },
+};
+
 export default function DashboardPage() {
   const { metrics } = useMetrics();
-  const { containers } = useDockerEvents();
+  const { containers, refetch: refetchContainers } = useDockerEvents();
   const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
+  const [timeRange, setTimeRange] = useState<TimeRange>('15m');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
 
   // Store metrics history for chart
   useEffect(() => {
     if (metrics && metrics.timestamp !== lastTimestampRef.current) {
       lastTimestampRef.current = metrics.timestamp;
+      const now = Date.now();
       const dataPoint: MetricsDataPoint = {
         time: new Date(metrics.timestamp).toLocaleTimeString('en-US', {
           hour: '2-digit',
@@ -34,13 +47,43 @@ export default function DashboardPage() {
           second: '2-digit',
           hour12: false,
         }),
+        timestamp: now,
         cpu: metrics.cpu.usage,
         ram: metrics.ram.usagePercent,
         disk: metrics.disk[0]?.usagePercent ?? 0,
       };
-      setMetricsHistory((prev) => [...prev.slice(-59), dataPoint]);
+
+      const config = TIME_RANGE_CONFIG[timeRange];
+      const cutoffTime = now - config.minutes * 60 * 1000;
+
+      setMetricsHistory((prev) => {
+        // Filter out old data points and add new one
+        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
+        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
+      });
     }
-  }, [metrics]);
+  }, [metrics, timeRange]);
+
+  // Filter history when time range changes
+  useEffect(() => {
+    const config = TIME_RANGE_CONFIG[timeRange];
+    const cutoffTime = Date.now() - config.minutes * 60 * 1000;
+    setMetricsHistory((prev) => prev.filter((p) => p.timestamp >= cutoffTime));
+  }, [timeRange]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Clear history and refetch containers
+    setMetricsHistory([]);
+    lastTimestampRef.current = null;
+    await refetchContainers();
+    // Brief delay to show refresh animation
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, [refetchContainers]);
+
+  const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTimeRange(e.target.value as TimeRange);
+  };
 
   const runningContainers = containers.filter((c) => c.state === 'running').length;
 
@@ -57,15 +100,24 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <ConnectionStatus />
 
-            <select className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer">
-              <option>Last 15 minutes</option>
-              <option>Last 1 hour</option>
-              <option>Last 6 hours</option>
-              <option>Last 24 hours</option>
+            <select
+              value={timeRange}
+              onChange={handleTimeRangeChange}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer"
+            >
+              {Object.entries(TIME_RANGE_CONFIG).map(([key, { label }]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
             </select>
 
-            <button className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all">
-              <RefreshCw className="w-5 h-5" />
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={cn('w-5 h-5', isRefreshing && 'animate-spin')} />
             </button>
           </div>
         </div>
