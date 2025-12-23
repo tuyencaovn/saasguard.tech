@@ -19,18 +19,30 @@ export class DockerService implements OnModuleInit {
    * Connect to Docker daemon
    */
   private async connect(): Promise<void> {
-    try {
-      this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
-      await this.docker.ping();
-      this.isConnected = true;
-      this.logger.log('Connected to Docker daemon');
+    // Try multiple socket paths (Linux, macOS Docker Desktop)
+    const socketPaths = [
+      '/var/run/docker.sock',
+      `${process.env.HOME}/.docker/run/docker.sock`,
+      '/Users/Shared/.docker/run/docker.sock',
+    ];
 
-      // Start listening to Docker events
-      this.startEventListener();
-    } catch (error) {
-      this.logger.warn('Failed to connect to Docker daemon - container monitoring disabled');
-      this.isConnected = false;
+    for (const socketPath of socketPaths) {
+      try {
+        this.docker = new Docker({ socketPath });
+        await this.docker.ping();
+        this.isConnected = true;
+        this.logger.log(`Connected to Docker daemon at ${socketPath}`);
+
+        // Start listening to Docker events
+        this.startEventListener();
+        return;
+      } catch {
+        // Try next socket path
+      }
     }
+
+    this.logger.warn('Failed to connect to Docker daemon - container monitoring disabled');
+    this.isConnected = false;
   }
 
   /**
