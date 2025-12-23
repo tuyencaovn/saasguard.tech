@@ -1,0 +1,52 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+} from 'typeorm';
+
+@Entity('metrics_history')
+@Index(['timestamp'])
+export class MetricsHistory {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column('decimal', { precision: 5, scale: 2 })
+  cpuPercent: number;
+
+  @Column('decimal', { precision: 5, scale: 2 })
+  ramPercent: number;
+
+  @Column('decimal', { precision: 5, scale: 2 })
+  diskPercent: number;
+
+  @Column('jsonb', { nullable: true })
+  diskDetails: {
+    fs: string;
+    size: number;
+    used: number;
+    available: number;
+    mount: string;
+  }[];
+
+  @Column('jsonb', { nullable: true })
+  cpuDetails: {
+    cores: number;
+    speed: number;
+    model: string;
+  };
+
+  @Column('jsonb', { nullable: true })
+  ramDetails: {
+    total: number;
+    used: number;
+    free: number;
+  };
+
+  @Column()
+  timestamp: Date;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
