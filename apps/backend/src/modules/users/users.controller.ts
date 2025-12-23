@@ -46,6 +46,17 @@ export class UsersController {
     };
   }
 
+  @Patch(':id/toggle-active')
+  async toggleActive(@Param('id', ParseUUIDPipe) id: string) {
+    const user = await this.usersService.toggleActive(id);
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+    };
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string) {

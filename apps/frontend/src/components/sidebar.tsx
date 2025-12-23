@@ -11,12 +11,24 @@ import {
   Settings,
   Server,
   LogOut,
+  Users,
+  type LucideIcon,
 } from 'lucide-react';
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: string;
+  hasNotification?: boolean;
+  adminOnly?: boolean;
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Containers', href: '/containers', icon: Box, badge: '8' },
   { name: 'Alerts', href: '/alerts', icon: Bell, hasNotification: true },
+  { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
 export function Sidebar() {
@@ -55,34 +67,36 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4">
         <div className="space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
-                  isActive
-                    ? 'nav-active text-white'
-                    : 'text-white/50 hover:text-white hover:bg-white/5'
-                )}
-              >
-                <item.icon
-                  className={cn('w-5 h-5', isActive && 'text-violet-400')}
-                />
-                {item.name}
-                {item.badge && (
-                  <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-white/10 text-white/60 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-                {item.hasNotification && (
-                  <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full status-warning" />
-                )}
-              </Link>
-            );
-          })}
+          {navigation
+            .filter((item) => !item.adminOnly || user?.role === 'admin')
+            .map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
+                    isActive
+                      ? 'nav-active text-white'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  <item.icon
+                    className={cn('w-5 h-5', isActive && 'text-violet-400')}
+                  />
+                  {item.name}
+                  {item.badge && (
+                    <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-white/10 text-white/60 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.hasNotification && (
+                    <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full status-warning" />
+                  )}
+                </Link>
+              );
+            })}
         </div>
 
         <div className="mt-8 pt-6 border-t border-white/5">

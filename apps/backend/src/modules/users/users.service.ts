@@ -61,6 +61,12 @@ export class UsersService {
     await this.userRepository.remove(user);
   }
 
+  async toggleActive(id: string): Promise<User> {
+    const user = await this.findOne(id);
+    user.isActive = !user.isActive;
+    return this.userRepository.save(user);
+  }
+
   async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
