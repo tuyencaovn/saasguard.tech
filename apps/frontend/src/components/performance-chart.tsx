@@ -77,13 +77,17 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
   const { ticks, domain } = useMemo(() => {
     const tickValues = generateTicks(timeRange);
     const rangeMs = TIME_RANGE_MINUTES[timeRange] * 60 * 1000;
-    const now = Date.now();
+
+    // Use latest data timestamp or current time for domain end
+    const latestTimestamp = data.length > 0 ? Math.max(...data.map((d) => d.timestamp)) : Date.now();
+    const domainEnd = Math.max(latestTimestamp, Date.now());
+    const domainStart = domainEnd - rangeMs;
 
     return {
       ticks: tickValues,
-      domain: [now - rangeMs, now] as [number, number],
+      domain: [domainStart, domainEnd] as [number, number],
     };
-  }, [timeRange]);
+  }, [timeRange, data]);
 
   if (data.length === 0) {
     return (
