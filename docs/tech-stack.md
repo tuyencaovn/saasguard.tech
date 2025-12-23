@@ -144,6 +144,32 @@ pnpm db:up        # Start PostgreSQL only
 pnpm db:down      # Stop PostgreSQL
 ```
 
+## Implemented Features
+
+### Dashboard
+- **Real-time metrics**: CPU, RAM, Disk usage with circular gauges
+- **System uptime**: Server uptime display (days/hours/minutes)
+- **Performance chart**: Line chart with CPU/RAM/Disk history
+  - Time range filter: 15m, 1h, 6h, 24h
+  - Fixed X-axis ticks (5min/15min/1.5h/6h intervals)
+  - Historical data loaded from database
+  - Real-time updates via WebSocket
+- **Quick stats**: Free RAM, CPU cores, container count
+- **Container overview**: Top 4 containers with status
+
+### Containers Page
+- **Container list**: All Docker containers with status
+- **View modes**: Grid and List view toggle
+- **Status filter**: All, Running, Stopped, Error
+- **Search**: Filter by container name or image
+- **Container uptime**: Shows how long container has been running
+- **Actions**: Start, Stop, Restart buttons
+- **Recent events**: Docker events (start/stop/die/create)
+
+### Alerts Page (Planned)
+- Alert rules configuration
+- Alert history
+
 ## Development Requirements
 
 - Node.js >= 20.x
