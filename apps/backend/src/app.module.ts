@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { DockerModule } from './modules/docker/docker.module';
+import { GatewaysModule } from './gateways/gateways.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { DockerModule } from './modules/docker/docker.module';
     AlertsModule,
     MetricsModule,
     DockerModule,
+    GatewaysModule,
   ],
   controllers: [AppController],
   providers: [AppService],
