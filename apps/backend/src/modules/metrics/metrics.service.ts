@@ -1,66 +1,116 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
+import * as si from 'systeminformation';
 import { MetricsHistory } from './entities/metrics-history.entity';
-
-export interface CurrentMetrics {
-  cpu: number;
-  ram: number;
-  disk: number;
-  cpuDetails?: {
-    cores: number;
-    speed: number;
-    model: string;
-  };
-  ramDetails?: {
-    total: number;
-    used: number;
-    free: number;
-  };
-  diskDetails?: {
-    fs: string;
-    size: number;
-    used: number;
-    available: number;
-    mount: string;
-  }[];
-  timestamp: Date;
-}
+import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics } from './types/metrics.types';
 
 @Injectable()
 export class MetricsService {
-  private currentMetrics: CurrentMetrics | null = null;
+  private readonly logger = new Logger(MetricsService.name);
+  private cachedMetrics: SystemMetrics | null = null;
 
   constructor(
     @InjectRepository(MetricsHistory)
     private readonly historyRepository: Repository<MetricsHistory>,
   ) {}
 
-  // Set current metrics (called by collector)
-  setCurrentMetrics(metrics: CurrentMetrics): void {
-    this.currentMetrics = metrics;
+  /**
+   * Collect fresh system metrics using systeminformation
+   */
+  async collectMetrics(): Promise<SystemMetrics> {
+    try {
+      const [cpuLoad, cpuInfo, mem, disk] = await Promise.all([
+        si.currentLoad(),
+        si.cpu(),
+        si.mem(),
+        si.fsSize(),
+      ]);
+
+      const cpu: CpuMetrics = {
+        usage: Math.round(cpuLoad.currentLoad * 100) / 100,
+        cores: cpuLoad.cpus.length,
+        speed: cpuInfo.speed,
+        model: cpuInfo.brand,
+      };
+
+      const ram: RamMetrics = {
+        total: mem.total,
+        used: mem.used,
+        free: mem.free,
+        usagePercent: Math.round((mem.used / mem.total) * 10000) / 100,
+      };
+
+      // Filter main disk partitions (exclude small/system partitions)
+      const diskMetrics: DiskMetrics[] = disk
+        .filter((d) => d.size > 1024 * 1024 * 1024) // > 1GB
+        .map((d) => ({
+          mount: d.mount,
+          fs: d.fs,
+          size: d.size,
+          used: d.used,
+          available: d.available,
+          usagePercent: Math.round(d.use * 100) / 100,
+        }));
+
+      this.cachedMetrics = {
+        cpu,
+        ram,
+        disk: diskMetrics,
+        timestamp: new Date(),
+      };
+
+      return this.cachedMetrics;
+    } catch (error) {
+      this.logger.error('Failed to collect metrics', error);
+      throw error;
+    }
   }
 
-  // Get current metrics
-  getCurrentMetrics(): CurrentMetrics | null {
-    return this.currentMetrics;
+  /**
+   * Get cached metrics (instant response)
+   */
+  getCachedMetrics(): SystemMetrics | null {
+    return this.cachedMetrics;
   }
 
-  // Save metrics to history
-  async saveToHistory(metrics: CurrentMetrics): Promise<MetricsHistory> {
+  /**
+   * Get current metrics (collect if not cached)
+   */
+  async getCurrentMetrics(): Promise<SystemMetrics> {
+    if (!this.cachedMetrics) {
+      return this.collectMetrics();
+    }
+    return this.cachedMetrics;
+  }
+
+  /**
+   * Save metrics to history (for charting)
+   */
+  async saveToHistory(metrics: SystemMetrics): Promise<MetricsHistory> {
     const history = this.historyRepository.create({
-      cpuPercent: metrics.cpu,
-      ramPercent: metrics.ram,
-      diskPercent: metrics.disk,
-      cpuDetails: metrics.cpuDetails,
-      ramDetails: metrics.ramDetails,
-      diskDetails: metrics.diskDetails,
+      cpuPercent: metrics.cpu.usage,
+      ramPercent: metrics.ram.usagePercent,
+      diskPercent: metrics.disk[0]?.usagePercent || 0,
+      cpuDetails: {
+        cores: metrics.cpu.cores,
+        speed: metrics.cpu.speed,
+        model: metrics.cpu.model,
+      },
+      ramDetails: {
+        total: metrics.ram.total,
+        used: metrics.ram.used,
+        free: metrics.ram.free,
+      },
+      diskDetails: metrics.disk,
       timestamp: metrics.timestamp,
     });
     return this.historyRepository.save(history);
   }
 
-  // Get history for charts
+  /**
+   * Get metrics history for charts
+   */
   async getHistory(minutes = 60): Promise<MetricsHistory[]> {
     const since = new Date(Date.now() - minutes * 60 * 1000);
     return this.historyRepository.find({
@@ -69,7 +119,9 @@ export class MetricsService {
     });
   }
 
-  // Cleanup old history (retention: 7 days by default)
+  /**
+   * Cleanup old history entries
+   */
   async cleanupOldHistory(days = 7): Promise<number> {
     const retentionDate = new Date();
     retentionDate.setDate(retentionDate.getDate() - days);

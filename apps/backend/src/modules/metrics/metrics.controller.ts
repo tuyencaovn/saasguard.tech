@@ -6,16 +6,12 @@ export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
 
   @Get('current')
-  getCurrentMetrics() {
-    const metrics = this.metricsService.getCurrentMetrics();
-    if (!metrics) {
-      return { message: 'Metrics not available yet' };
-    }
-    return metrics;
+  async getCurrentMetrics() {
+    return this.metricsService.getCurrentMetrics();
   }
 
   @Get('history')
-  getHistory(@Query('minutes') minutes?: string) {
+  async getHistory(@Query('minutes') minutes?: string) {
     return this.metricsService.getHistory(minutes ? parseInt(minutes, 10) : 60);
   }
 }

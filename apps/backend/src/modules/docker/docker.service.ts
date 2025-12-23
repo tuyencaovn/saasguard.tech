@@ -1,23 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import Docker from 'dockerode';
-
-export interface ContainerInfo {
-  id: string;
-  name: string;
-  image: string;
-  status: string;
-  state: string;
-  created: Date;
-  ports: { private: number; public: number; type: string }[];
-  stats?: {
-    cpuPercent: number;
-    memoryUsage: number;
-    memoryLimit: number;
-    memoryPercent: number;
-    networkRx: number;
-    networkTx: number;
-  };
-}
+import { ContainerInfo, ContainerStats, DockerEvent } from '../metrics/types/metrics.types';
 
 @Injectable()
 export class DockerService implements OnModuleInit {
@@ -25,26 +9,40 @@ export class DockerService implements OnModuleInit {
   private docker: Docker | null = null;
   private isConnected = false;
 
+  constructor(private readonly eventEmitter: EventEmitter2) {}
+
   async onModuleInit() {
     await this.connect();
   }
 
+  /**
+   * Connect to Docker daemon
+   */
   private async connect(): Promise<void> {
     try {
       this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
       await this.docker.ping();
       this.isConnected = true;
       this.logger.log('Connected to Docker daemon');
+
+      // Start listening to Docker events
+      this.startEventListener();
     } catch (error) {
       this.logger.warn('Failed to connect to Docker daemon - container monitoring disabled');
       this.isConnected = false;
     }
   }
 
+  /**
+   * Check if Docker is connected
+   */
   isDockerConnected(): boolean {
     return this.isConnected;
   }
 
+  /**
+   * List all containers
+   */
   async listContainers(all = true): Promise<ContainerInfo[]> {
     if (!this.docker || !this.isConnected) {
       return [];
@@ -57,7 +55,7 @@ export class DockerService implements OnModuleInit {
         name: container.Names[0]?.replace(/^\//, '') || 'unknown',
         image: container.Image,
         status: container.Status,
-        state: container.State,
+        state: container.State as ContainerInfo['state'],
         created: new Date(container.Created * 1000),
         ports: container.Ports.map((p) => ({
           private: p.PrivatePort,
@@ -71,7 +69,10 @@ export class DockerService implements OnModuleInit {
     }
   }
 
-  async getContainerStats(containerId: string): Promise<ContainerInfo['stats'] | null> {
+  /**
+   * Get container stats
+   */
+  async getContainerStats(containerId: string): Promise<ContainerStats | null> {
     if (!this.docker || !this.isConnected) {
       return null;
     }
@@ -81,9 +82,12 @@ export class DockerService implements OnModuleInit {
       const stats = await container.stats({ stream: false });
 
       // Calculate CPU percentage
-      const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
-      const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
-      const cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * stats.cpu_stats.online_cpus * 100 : 0;
+      const cpuDelta =
+        stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+      const systemDelta =
+        stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+      const cpuPercent =
+        systemDelta > 0 ? (cpuDelta / systemDelta) * stats.cpu_stats.online_cpus * 100 : 0;
 
       // Memory stats
       const memoryUsage = stats.memory_stats.usage || 0;
@@ -113,6 +117,9 @@ export class DockerService implements OnModuleInit {
     }
   }
 
+  /**
+   * Start container
+   */
   async startContainer(containerId: string): Promise<void> {
     if (!this.docker || !this.isConnected) {
       throw new Error('Docker not connected');
@@ -121,6 +128,9 @@ export class DockerService implements OnModuleInit {
     await container.start();
   }
 
+  /**
+   * Stop container
+   */
   async stopContainer(containerId: string): Promise<void> {
     if (!this.docker || !this.isConnected) {
       throw new Error('Docker not connected');
@@ -129,11 +139,59 @@ export class DockerService implements OnModuleInit {
     await container.stop();
   }
 
+  /**
+   * Restart container
+   */
   async restartContainer(containerId: string): Promise<void> {
     if (!this.docker || !this.isConnected) {
       throw new Error('Docker not connected');
     }
     const container = this.docker.getContainer(containerId);
     await container.restart();
+  }
+
+  /**
+   * Start listening to Docker events
+   */
+  private async startEventListener(): Promise<void> {
+    if (!this.docker || !this.isConnected) {
+      return;
+    }
+
+    try {
+      const stream = await this.docker.getEvents({
+        filters: { type: ['container'] },
+      });
+
+      stream.on('data', (chunk: Buffer) => {
+        try {
+          const event = JSON.parse(chunk.toString());
+          const action = event.Action;
+
+          if (['start', 'stop', 'restart', 'die', 'create', 'destroy'].includes(action)) {
+            const dockerEvent: DockerEvent = {
+              action,
+              containerId: event.Actor?.ID?.substring(0, 12) || '',
+              containerName: event.Actor?.Attributes?.name || 'unknown',
+              timestamp: new Date(event.time * 1000),
+            };
+
+            // Emit event for WebSocket broadcast
+            this.eventEmitter.emit('docker.event', dockerEvent);
+            this.logger.log(`Docker event: ${action} - ${dockerEvent.containerName}`);
+          }
+        } catch (parseError) {
+          // Ignore parse errors from malformed events
+        }
+      });
+
+      stream.on('error', (error) => {
+        this.logger.error('Docker event stream error', error);
+      });
+
+      this.logger.log('Docker event listener started');
+    } catch (error) {
+      this.logger.error('Failed to start Docker event listener', error);
+    }
   }
 }

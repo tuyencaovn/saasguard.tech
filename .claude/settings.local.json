@@ -24,7 +24,9 @@
       "Bash(pm2 restart:*)",
       "Bash(pm2 delete:*)",
       "Bash(pm2 start:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm add:*)"
     ]
   }
 }
