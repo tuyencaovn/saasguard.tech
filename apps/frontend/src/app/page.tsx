@@ -26,6 +26,23 @@ const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; max
   '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
 };
 
+// Fetch metrics history from API
+async function fetchMetricsHistory(minutes: number): Promise<MetricsDataPoint[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/metrics/history?minutes=${minutes}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
+      timestamp: new Date(item.timestamp).getTime(),
+      cpu: Number(item.cpuPercent),
+      ram: Number(item.ramPercent),
+      disk: Number(item.diskPercent),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default function DashboardPage() {
   const { metrics } = useMetrics();
   const { containers, refetch: refetchContainers } = useDockerEvents();
@@ -33,8 +50,20 @@ export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('15m');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
+  const historyLoadedRef = useRef<TimeRange | null>(null);
 
-  // Store metrics history for chart (sampled at fixed intervals)
+  // Load history from API on mount and when time range changes
+  useEffect(() => {
+    if (historyLoadedRef.current === timeRange) return;
+
+    const config = TIME_RANGE_CONFIG[timeRange];
+    fetchMetricsHistory(config.minutes).then((history) => {
+      setMetricsHistory(history);
+      historyLoadedRef.current = timeRange;
+    });
+  }, [timeRange]);
+
+  // Add new metrics to history (from WebSocket)
   useEffect(() => {
     if (metrics && metrics.timestamp !== lastTimestampRef.current) {
       lastTimestampRef.current = metrics.timestamp;
@@ -45,7 +74,6 @@ export default function DashboardPage() {
         // Check if enough time has passed since last data point
         const lastPoint = prev[prev.length - 1];
         if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
-          // Not enough time passed, skip this update
           return prev;
         }
 
@@ -62,13 +90,6 @@ export default function DashboardPage() {
       });
     }
   }, [metrics, timeRange]);
-
-  // Filter history when time range changes
-  useEffect(() => {
-    const config = TIME_RANGE_CONFIG[timeRange];
-    const cutoffTime = Date.now() - config.minutes * 60 * 1000;
-    setMetricsHistory((prev) => prev.filter((p) => p.timestamp >= cutoffTime));
-  }, [timeRange]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
