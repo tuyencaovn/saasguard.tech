@@ -62,19 +62,43 @@ export class DockerService implements OnModuleInit {
 
     try {
       const containers = await this.docker.listContainers({ all });
-      return containers.map((container) => ({
-        id: container.Id.substring(0, 12),
-        name: container.Names[0]?.replace(/^\//, '') || 'unknown',
-        image: container.Image,
-        status: container.Status,
-        state: container.State as ContainerInfo['state'],
-        created: new Date(container.Created * 1000),
-        ports: container.Ports.map((p) => ({
-          private: p.PrivatePort,
-          public: p.PublicPort,
-          type: p.Type,
-        })),
-      }));
+
+      // Get startedAt for running containers via inspect
+      const containerInfos = await Promise.all(
+        containers.map(async (container) => {
+          let startedAt: Date | undefined;
+
+          // Only fetch startedAt for running containers
+          if (container.State === 'running') {
+            try {
+              const inspectData = await this.docker!.getContainer(container.Id).inspect();
+              const startedAtStr = inspectData.State?.StartedAt;
+              if (startedAtStr && startedAtStr !== '0001-01-01T00:00:00Z') {
+                startedAt = new Date(startedAtStr);
+              }
+            } catch {
+              // Ignore inspect errors
+            }
+          }
+
+          return {
+            id: container.Id.substring(0, 12),
+            name: container.Names[0]?.replace(/^\//, '') || 'unknown',
+            image: container.Image,
+            status: container.Status,
+            state: container.State as ContainerInfo['state'],
+            created: new Date(container.Created * 1000),
+            startedAt,
+            ports: container.Ports.map((p) => ({
+              private: p.PrivatePort,
+              public: p.PublicPort,
+              type: p.Type,
+            })),
+          };
+        }),
+      );
+
+      return containerInfos;
     } catch (error) {
       this.logger.error('Failed to list containers', error);
       return [];

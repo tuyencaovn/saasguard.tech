@@ -3,7 +3,17 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useDockerEvents } from '@/hooks/use-socket';
 import { ConnectionStatus } from '@/components/connection-status';
-import { formatTime } from '@/lib/utils';
+import { formatTime, formatUptime } from '@/lib/utils';
+
+// Calculate container uptime from startedAt
+function getContainerUptime(startedAt?: string): string {
+  if (!startedAt) return '—';
+  const startTime = new Date(startedAt).getTime();
+  const now = Date.now();
+  const uptimeSeconds = Math.floor((now - startTime) / 1000);
+  if (uptimeSeconds < 0) return '—';
+  return formatUptime(uptimeSeconds);
+}
 import {
   Box,
   Play,
@@ -15,6 +25,7 @@ import {
   List,
   MoreVertical,
   AlertTriangle,
+  Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -240,7 +251,7 @@ export default function ContainersPage() {
                       Ports
                     </th>
                     <th className="text-left py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
-                      Created
+                      Uptime
                     </th>
                     <th className="text-right py-4 px-6 text-xs font-medium uppercase tracking-wide text-white/40">
                       Actions
@@ -306,8 +317,10 @@ export default function ContainersPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-sm text-white/40">
-                          {new Date(container.created).toLocaleDateString()}
+                        <span className="text-sm font-mono text-white/60">
+                          {container.state === 'running'
+                            ? getContainerUptime(container.startedAt)
+                            : '—'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -386,6 +399,13 @@ export default function ContainersPage() {
                       )}
                     />
                   </div>
+                  {/* Uptime for running containers */}
+                  {container.state === 'running' && container.startedAt && (
+                    <div className="flex items-center gap-2 mb-3 text-xs text-white/50">
+                      <Timer className="w-3.5 h-3.5" />
+                      <span className="font-mono">{getContainerUptime(container.startedAt)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span
                       className={cn(

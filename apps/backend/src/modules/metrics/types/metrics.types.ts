@@ -50,6 +50,7 @@ export interface ContainerInfo {
   status: string;
   state: 'running' | 'exited' | 'paused' | 'restarting' | 'created' | 'dead';
   created: Date;
+  startedAt?: Date; // when the container was last started
   ports: { private: number; public: number; type: string }[];
   stats?: ContainerStats;
 }
