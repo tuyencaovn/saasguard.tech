@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
 import {
   LayoutDashboard,
   Box,
@@ -20,6 +21,23 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
+  // Get user initials
+  const initials = user?.email
+    ? user.email
+        .split('@')[0]
+        .split('.')
+        .map((part) => part[0]?.toUpperCase())
+        .join('')
+        .slice(0, 2)
+    : 'U';
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 sidebar-glass flex flex-col z-20">
@@ -87,13 +105,21 @@ export function Sidebar() {
       <div className="p-4 mx-3 mb-4 rounded-xl bg-white/5 border border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-medium shadow-lg shadow-violet-500/20">
-            AD
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">Admin User</div>
-            <div className="text-xs text-white/40 truncate">admin@bimnext.com</div>
+            <div className="text-sm font-medium truncate capitalize">
+              {user?.role || 'User'}
+            </div>
+            <div className="text-xs text-white/40 truncate">
+              {user?.email || 'Loading...'}
+            </div>
           </div>
-          <button className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+          <button
+            onClick={handleLogout}
+            className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            title="Sign out"
+          >
             <LogOut className="w-5 h-5" />
           </button>
         </div>

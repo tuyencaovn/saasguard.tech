@@ -56,11 +56,12 @@ export function MetricGauge({
   label,
   value,
   max = 100,
-  unit = '%',
+  unit: _unit = '%',
   subtitle,
   thresholds,
   color = 'violet',
 }: MetricGaugeProps) {
+  void _unit; // Unused but kept for future use
   const percentage = Math.min((value / max) * 100, 100);
   const circumference = 2 * Math.PI * 42; // radius = 42
   const strokeDashoffset = circumference - (percentage / 100) * circumference;

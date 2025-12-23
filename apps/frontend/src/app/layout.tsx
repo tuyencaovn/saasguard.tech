@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
-import { Sidebar } from '@/components/sidebar';
+import { AuthProvider } from '@/contexts/auth-context';
+import { LayoutWrapper } from '@/components/layout-wrapper';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -35,10 +36,9 @@ export default function RootLayout({
           jetbrainsMono.variable
         )}
       >
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 ml-64">{children}</main>
-        </div>
+        <AuthProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </AuthProvider>
       </body>
     </html>
   );
