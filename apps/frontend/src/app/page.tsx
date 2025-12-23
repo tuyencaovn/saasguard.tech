@@ -73,9 +73,7 @@ export default function DashboardPage() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Clear history and refetch containers
-    setMetricsHistory([]);
-    lastTimestampRef.current = null;
+    // Refetch containers only, keep metrics history intact
     await refetchContainers();
     // Brief delay to show refresh animation
     setTimeout(() => setIsRefreshing(false), 500);
