@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import * as si from 'systeminformation';
 import { MetricsHistory } from './entities/metrics-history.entity';
-import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics } from './types/metrics.types';
+import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics, UptimeMetrics } from './types/metrics.types';
 
 @Injectable()
 export class MetricsService {
@@ -20,11 +20,12 @@ export class MetricsService {
    */
   async collectMetrics(): Promise<SystemMetrics> {
     try {
-      const [cpuLoad, cpuInfo, mem, disk] = await Promise.all([
+      const [cpuLoad, cpuInfo, mem, disk, time] = await Promise.all([
         si.currentLoad(),
         si.cpu(),
         si.mem(),
         si.fsSize(),
+        si.time(),
       ]);
 
       const cpu: CpuMetrics = {
@@ -53,10 +54,16 @@ export class MetricsService {
           usagePercent: Math.round(d.use * 100) / 100,
         }));
 
+      const uptime: UptimeMetrics = {
+        uptime: time.uptime,
+        bootTime: new Date(Date.now() - time.uptime * 1000),
+      };
+
       this.cachedMetrics = {
         cpu,
         ram,
         disk: diskMetrics,
+        uptime,
         timestamp: new Date(),
       };
 

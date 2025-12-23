@@ -21,10 +21,16 @@ export interface DiskMetrics {
   usagePercent: number; // 0-100
 }
 
+export interface UptimeMetrics {
+  uptime: number; // seconds
+  bootTime: Date;
+}
+
 export interface SystemMetrics {
   cpu: CpuMetrics;
   ram: RamMetrics;
   disk: DiskMetrics[];
+  uptime: UptimeMetrics;
   timestamp: Date;
 }
 

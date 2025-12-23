@@ -5,8 +5,8 @@ import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
 import { PerformanceChart } from '@/components/performance-chart';
-import { formatBytes } from '@/lib/utils';
-import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight } from 'lucide-react';
+import { formatBytes, formatUptime } from '@/lib/utils';
+import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -220,12 +220,12 @@ export default function DashboardPage() {
                   <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-emerald-400" />
+                        <Timer className="w-5 h-5 text-emerald-400" />
                       </div>
-                      <span className="text-white/60">Last Update</span>
+                      <span className="text-white/60">Uptime</span>
                     </div>
                     <span className="font-mono font-semibold">
-                      {new Date(metrics.timestamp).toLocaleTimeString()}
+                      {formatUptime(metrics.uptime.uptime)}
                     </span>
                   </div>
 
@@ -237,6 +237,18 @@ export default function DashboardPage() {
                       <span className="text-white/60">Free RAM</span>
                     </div>
                     <span className="font-mono font-semibold">{formatBytes(metrics.ram.free)}</span>
+                  </div>
+
+                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <span className="text-white/60">Last Update</span>
+                    </div>
+                    <span className="font-mono font-semibold text-sm">
+                      {new Date(metrics.timestamp).toLocaleTimeString()}
+                    </span>
                   </div>
 
                   <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
