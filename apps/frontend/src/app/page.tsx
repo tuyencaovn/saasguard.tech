@@ -29,7 +29,7 @@ const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; max
 // Fetch metrics history from API
 async function fetchMetricsHistory(minutes: number): Promise<MetricsDataPoint[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/metrics/history?minutes=${minutes}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/metrics/history?minutes=${minutes}`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
