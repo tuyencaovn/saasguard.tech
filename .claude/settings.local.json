@@ -47,7 +47,10 @@
       "Bash(echo '=== Check middleware ===' find /Users/tuyencao/workspace/bimnext_monitor/apps/frontend -name middleware*)",
       "Bash(1 ls /Users/tuyencao/workspace/bimnext_monitor/apps/frontend/src/app/reset-password/)",
       "Bash(echo echo '=== Check API endpoints ===' grep -r \"forgot-password\\\\|reset-password\" /Users/tuyencao/workspace/bimnext_monitor/apps/backend/src/modules/auth/*.ts)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Skill(ui-ux-pro-max)",
+      "Bash(node evaluate.js:*)",
+      "Bash(node /tmp/screenshot-login.js:*)"
     ]
   }
 }

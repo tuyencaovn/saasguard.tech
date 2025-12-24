@@ -289,6 +289,48 @@ body {
   transform: translateY(-1px);
 }
 
+/* Glass subtle for floating nodes */
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Float animation for nodes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 6s ease-in-out 2s infinite;
+}
+
+/* Pulse glow for background orbs */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Network line animation */
+@keyframes network-dash {
+  to { stroke-dashoffset: -100; }
+}
+
+.animate-network-line {
+  stroke-dasharray: 6, 4;
+  animation: network-dash 25s linear infinite;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

@@ -93,10 +93,16 @@ export default function AlertsPage() {
       const res = await fetch(`${API_URL}/alerts/thresholds`, {
         credentials: 'include',
       });
-      const data = await res.json();
-      setThresholds(data);
+      if (res.ok) {
+        const data = await res.json();
+        setThresholds(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to fetch thresholds:', res.status);
+        setThresholds([]);
+      }
     } catch (error) {
       console.error('Failed to fetch thresholds:', error);
+      setThresholds([]);
     } finally {
       setLoading(false);
     }
