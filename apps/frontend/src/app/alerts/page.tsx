@@ -14,9 +14,6 @@ import {
   Clock,
   Mail,
   AlertTriangle,
-  Info,
-  Check,
-  Eye,
   Ban,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
