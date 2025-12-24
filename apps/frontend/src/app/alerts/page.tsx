@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { ConnectionStatus } from '@/components/connection-status';
 import { ThresholdModal, ThresholdFormData } from '@/components/threshold-modal';
 import {
@@ -68,6 +69,8 @@ const metricConfig: Record<string, { icon: typeof Cpu; iconBg: string; iconColor
 };
 
 export default function AlertsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [thresholds, setThresholds] = useState<AlertThreshold[]>([]);
   const [alertLogs, setAlertLogs] = useState<AlertLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,13 +204,15 @@ export default function AlertsPage() {
           </div>
           <div className="flex items-center gap-4">
             <ConnectionStatus />
-            <button
-              onClick={openCreateModal}
-              className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              New Rule
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openCreateModal}
+                className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                New Rule
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -248,13 +253,15 @@ export default function AlertsPage() {
             ) : thresholds.length === 0 ? (
               <div className="glass-card rounded-2xl p-12 text-center">
                 <p className="text-white/50 mb-4">No alert thresholds configured</p>
-                <button
-                  onClick={openCreateModal}
-                  className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2 mx-auto"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create your first threshold
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={openCreateModal}
+                    className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2 mx-auto"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create your first threshold
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -290,36 +297,38 @@ export default function AlertsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {/* Toggle Switch */}
-                          <button
-                            onClick={() => toggleEnabled(threshold.id, threshold.enabled)}
-                            className={cn(
-                              'relative w-12 h-7 rounded-full p-1',
-                              threshold.enabled && 'toggle-active'
-                            )}
-                          >
-                            <span className="toggle-track absolute inset-0 rounded-full bg-white/10" />
-                            <span
+                        {isAdmin && (
+                          <div className="flex items-center gap-3">
+                            {/* Toggle Switch */}
+                            <button
+                              onClick={() => toggleEnabled(threshold.id, threshold.enabled)}
                               className={cn(
-                                'toggle-thumb relative block w-5 h-5 rounded-full shadow-lg',
-                                threshold.enabled ? 'bg-white' : 'bg-white/50'
+                                'relative w-12 h-7 rounded-full p-1',
+                                threshold.enabled && 'toggle-active'
                               )}
-                            />
-                          </button>
-                          <button
-                            onClick={() => openEditModal(threshold)}
-                            className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                          >
-                            <Pencil className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteThreshold(threshold.id)}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
+                            >
+                              <span className="toggle-track absolute inset-0 rounded-full bg-white/10" />
+                              <span
+                                className={cn(
+                                  'toggle-thumb relative block w-5 h-5 rounded-full shadow-lg',
+                                  threshold.enabled ? 'bg-white' : 'bg-white/50'
+                                )}
+                              />
+                            </button>
+                            <button
+                              onClick={() => openEditModal(threshold)}
+                              className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                            >
+                              <Pencil className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteThreshold(threshold.id)}
+                              className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Configuration */}

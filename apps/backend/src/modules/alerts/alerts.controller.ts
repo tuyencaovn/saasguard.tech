@@ -13,7 +13,8 @@ import { AlertsService } from './alerts.service';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { UpdateThresholdDto } from './dto/update-threshold.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('alerts')
 export class AlertsController {
@@ -21,6 +22,7 @@ export class AlertsController {
 
   // Thresholds
   @Post('thresholds')
+  @Roles(UserRole.ADMIN)
   createThreshold(@Body() dto: CreateThresholdDto, @CurrentUser() user: User) {
     return this.alertsService.createThreshold(dto, user.id);
   }
@@ -36,6 +38,7 @@ export class AlertsController {
   }
 
   @Patch('thresholds/:id')
+  @Roles(UserRole.ADMIN)
   updateThreshold(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateThresholdDto,
@@ -44,6 +47,7 @@ export class AlertsController {
   }
 
   @Delete('thresholds/:id')
+  @Roles(UserRole.ADMIN)
   removeThreshold(@Param('id', ParseUUIDPipe) id: string) {
     return this.alertsService.removeThreshold(id);
   }
