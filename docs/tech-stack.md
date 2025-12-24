@@ -203,9 +203,24 @@ pnpm db:down      # Stop PostgreSQL
 - **Forgot password**: Password reset via email (SMTP)
 - **Token expiry**: Reset tokens expire in 15 minutes
 
-### Alerts Page (Planned)
-- Alert rules configuration
-- Alert history
+### Alerts Page (COMPLETED - v2.0.0)
+- Alert threshold configuration (create, read, update, delete)
+- Multi-metric support (CPU, RAM, Disk)
+- Operator selection (GT, GTE, LT, LTE, EQ, NE)
+- Multi-channel notifications (Email, Telegram)
+- Cooldown period configuration
+- Enable/disable toggles
+- Alert history with pagination (10, 25, 50 items per page)
+- Delivery status tracking (Sent, Failed, Pending)
+- Last triggered timestamp display
+- Error message logging
+
+**Alert Architecture:**
+- Event-driven: `metrics.updated` event triggers threshold checks
+- Cooldown mechanism: Prevents alert spam (configurable per threshold)
+- Always log: Creates entry even without email configured
+- Multi-channel: Send to Email and/or Telegram simultaneously
+- History: Complete audit trail with pagination
 
 ## Development Requirements
 

@@ -40,7 +40,14 @@
       "Bash(node fill.js:*)",
       "Bash(node click.js:*)",
       "Skill(plan:fast)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(xargs kill -9)",
+      "WebFetch(domain:api.nodemailer.com)",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash(echo '=== Check middleware ===' find /Users/tuyencao/workspace/bimnext_monitor/apps/frontend -name middleware*)",
+      "Bash(1 ls /Users/tuyencao/workspace/bimnext_monitor/apps/frontend/src/app/reset-password/)",
+      "Bash(echo echo '=== Check API endpoints ===' grep -r \"forgot-password\\\\|reset-password\" /Users/tuyencao/workspace/bimnext_monitor/apps/backend/src/modules/auth/*.ts)",
+      "Bash(wc:*)"
     ]
   }
 }

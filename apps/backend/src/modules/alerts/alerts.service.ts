@@ -24,16 +24,33 @@ export class AlertsService {
     return this.thresholdRepository.save(threshold);
   }
 
-  async findAllThresholds(): Promise<AlertThreshold[]> {
-    return this.thresholdRepository.find({
+  async findAllThresholds(): Promise<(AlertThreshold & { lastTriggeredAt: Date | null })[]> {
+    const thresholds = await this.thresholdRepository.find({
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
+
+    // Get last triggered time for each threshold
+    const result = await Promise.all(
+      thresholds.map(async (threshold) => {
+        const lastLog = await this.logRepository.findOne({
+          where: { alertThresholdId: threshold.id },
+          order: { triggeredAt: 'DESC' },
+        });
+        return {
+          ...threshold,
+          lastTriggeredAt: lastLog?.triggeredAt || null,
+        };
+      }),
+    );
+
+    return result;
   }
 
   async findEnabledThresholds(): Promise<AlertThreshold[]> {
     return this.thresholdRepository.find({
       where: { enabled: true },
+      relations: ['user'],
     });
   }
 
@@ -91,12 +108,23 @@ export class AlertsService {
     return this.logRepository.save(log);
   }
 
-  async findRecentLogs(limit = 50): Promise<AlertLog[]> {
-    return this.logRepository.find({
+  async findRecentLogs(page = 1, limit = 10): Promise<{ data: AlertLog[]; total: number; page: number; limit: number; totalPages: number }> {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.logRepository.findAndCount({
       relations: ['alertThreshold'],
       order: { triggeredAt: 'DESC' },
+      skip,
       take: limit,
     });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findLogsByThreshold(thresholdId: string): Promise<AlertLog[]> {
@@ -111,29 +139,20 @@ export class AlertsService {
     const threshold = await this.findThreshold(thresholdId);
     const cooldownTime = new Date(Date.now() - threshold.cooldownMs);
 
-    const recentLog = await this.logRepository.findOne({
+    // Check for any recent log (regardless of delivery status)
+    const lastLog = await this.logRepository.findOne({
       where: {
         alertThresholdId: thresholdId,
-        triggeredAt: LessThan(cooldownTime),
-        deliveryStatus: DeliveryStatus.SENT,
       },
       order: { triggeredAt: 'DESC' },
     });
 
-    // If no recent sent log within cooldown, can send
-    const lastSentLog = await this.logRepository.findOne({
-      where: {
-        alertThresholdId: thresholdId,
-        deliveryStatus: DeliveryStatus.SENT,
-      },
-      order: { triggeredAt: 'DESC' },
-    });
-
-    if (!lastSentLog) {
-      return true; // No previous sent log
+    if (!lastLog) {
+      return true; // No previous log
     }
 
-    return lastSentLog.triggeredAt < cooldownTime;
+    // Can send if last log is older than cooldown period
+    return lastLog.triggeredAt < cooldownTime;
   }
 
   // Cleanup old logs (retention: 90 days)

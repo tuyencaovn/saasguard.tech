@@ -76,4 +76,29 @@ export class EmailService {
       return false;
     }
   }
+
+  async sendAlertEmail(to: string, subject: string, html: string): Promise<boolean> {
+    if (!this.transporter) {
+      this.logger.warn(`Alert email not sent (SMTP not configured): ${to}`);
+      return false;
+    }
+
+    const fromName = this.configService.get<string>('SMTP_FROM_NAME', 'BimNext Monitor');
+    const fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL') || this.configService.get<string>('SMTP_USER');
+
+    try {
+      await this.transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+
+      this.logger.log(`Alert email sent to: ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send alert email to ${to}:`, error);
+      return false;
+    }
+  }
 }

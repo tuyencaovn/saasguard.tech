@@ -12,17 +12,17 @@ import {
 import { AlertsService } from './alerts.service';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { UpdateThresholdDto } from './dto/update-threshold.dto';
-import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Controller('alerts')
-@Public() // TODO: Remove after frontend auth implemented
 export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
   // Thresholds
   @Post('thresholds')
-  createThreshold(@Body() dto: CreateThresholdDto) {
-    return this.alertsService.createThreshold(dto);
+  createThreshold(@Body() dto: CreateThresholdDto, @CurrentUser() user: User) {
+    return this.alertsService.createThreshold(dto, user.id);
   }
 
   @Get('thresholds')
@@ -50,8 +50,13 @@ export class AlertsController {
 
   // Logs
   @Get('logs')
-  findRecentLogs(@Query('limit') limit?: string) {
-    return this.alertsService.findRecentLogs(limit ? parseInt(limit, 10) : 50);
+  findRecentLogs(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.alertsService.findRecentLogs(pageNum, limitNum);
   }
 
   @Get('logs/threshold/:id')
