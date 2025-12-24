@@ -5,6 +5,7 @@ import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
 import { PerformanceChart } from '@/components/performance-chart';
+import { NetworkChart } from '@/components/network-chart';
 import { formatBytes, formatUptime } from '@/lib/utils';
 import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer, Wifi, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
@@ -15,6 +16,12 @@ interface MetricsDataPoint {
   cpu: number;
   ram: number;
   disk: number;
+}
+
+interface NetworkDataPoint {
+  timestamp: number;
+  rx: number;
+  tx: number;
 }
 
 type TimeRange = '15m' | '1h' | '6h' | '24h';
@@ -36,19 +43,25 @@ function formatNetworkSpeed(bytesPerSec: number): string {
 }
 
 // Fetch metrics history from API
-async function fetchMetricsHistory(minutes: number): Promise<MetricsDataPoint[]> {
+async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[] }> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/metrics/history?minutes=${minutes}`);
-    if (!res.ok) return [];
+    if (!res.ok) return { metrics: [], network: [] };
     const data = await res.json();
-    return data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
+    const metrics = data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
       timestamp: new Date(item.timestamp).getTime(),
       cpu: Number(item.cpuPercent),
       ram: Number(item.ramPercent),
       disk: Number(item.diskPercent),
     }));
+    const network = data.map((item: { timestamp: string; networkRx?: number; networkTx?: number }) => ({
+      timestamp: new Date(item.timestamp).getTime(),
+      rx: Number(item.networkRx || 0),
+      tx: Number(item.networkTx || 0),
+    }));
+    return { metrics, network };
   } catch {
-    return [];
+    return { metrics: [], network: [] };
   }
 }
 
@@ -56,6 +69,7 @@ export default function DashboardPage() {
   const { metrics } = useMetrics();
   const { containers, refetch: refetchContainers } = useDockerEvents();
   const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
+  const [networkHistory, setNetworkHistory] = useState<NetworkDataPoint[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('15m');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
@@ -66,8 +80,9 @@ export default function DashboardPage() {
     if (historyLoadedRef.current === timeRange) return;
 
     const config = TIME_RANGE_CONFIG[timeRange];
-    fetchMetricsHistory(config.minutes).then((history) => {
-      setMetricsHistory(history);
+    fetchMetricsHistory(config.minutes).then(({ metrics: metricsData, network: networkData }) => {
+      setMetricsHistory(metricsData);
+      setNetworkHistory(networkData);
       historyLoadedRef.current = timeRange;
     });
   }, [timeRange]);
@@ -91,6 +106,24 @@ export default function DashboardPage() {
           cpu: metrics.cpu.usage,
           ram: metrics.ram.usagePercent,
           disk: metrics.disk[0]?.usagePercent ?? 0,
+        };
+
+        const cutoffTime = now - config.minutes * 60 * 1000;
+        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
+        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
+      });
+
+      // Also update network history
+      setNetworkHistory((prev) => {
+        const lastPoint = prev[prev.length - 1];
+        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
+          return prev;
+        }
+
+        const dataPoint: NetworkDataPoint = {
+          timestamp: now,
+          rx: metrics.network?.rx ?? 0,
+          tx: metrics.network?.tx ?? 0,
         };
 
         const cutoffTime = now - config.minutes * 60 * 1000;
@@ -318,6 +351,24 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Network Traffic Chart */}
+            <div className="glass-card rounded-2xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Network Traffic</h3>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span className="text-white/60">Download</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-white/60">Upload</span>
+                  </div>
+                </div>
+              </div>
+              <NetworkChart data={networkHistory} timeRange={timeRange} />
             </div>
 
             {/* Container Overview */}

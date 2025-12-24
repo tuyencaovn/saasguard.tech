@@ -150,6 +150,8 @@ export class MetricsService {
         free: metrics.ram.free,
       },
       diskDetails: metrics.disk,
+      networkRx: metrics.network.rx,
+      networkTx: metrics.network.tx,
       timestamp: metrics.timestamp,
     });
     return this.historyRepository.save(history);

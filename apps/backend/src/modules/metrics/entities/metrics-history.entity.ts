@@ -44,6 +44,13 @@ export class MetricsHistory {
     free: number;
   };
 
+  // Network throughput (bytes per second)
+  @Column('bigint', { default: 0 })
+  networkRx: number;
+
+  @Column('bigint', { default: 0 })
+  networkTx: number;
+
   @Column()
   timestamp: Date;
 

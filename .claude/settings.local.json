@@ -50,7 +50,8 @@
       "Bash(wc:*)",
       "Skill(ui-ux-pro-max)",
       "Bash(node evaluate.js:*)",
-      "Bash(node /tmp/screenshot-login.js:*)"
+      "Bash(node /tmp/screenshot-login.js:*)",
+      "Bash(pnpm exec tsc:*)"
     ]
   }
 }
