@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -16,12 +17,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+
 interface NavItem {
   name: string;
   href: string;
   icon: LucideIcon;
   badge?: string;
-  hasNotification?: boolean;
   adminOnly?: boolean;
 }
 
@@ -29,7 +31,7 @@ const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Containers', href: '/containers', icon: Box },
   { name: 'PM2', href: '/pm2', icon: Terminal },
-  { name: 'Alerts', href: '/alerts', icon: Bell, hasNotification: true },
+  { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
@@ -37,6 +39,34 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const [hasRecentAlerts, setHasRecentAlerts] = useState(false);
+
+  // Check for alerts triggered in last 24h
+  useEffect(() => {
+    const checkRecentAlerts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/alerts/logs?page=1&limit=1`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.length > 0) {
+            const lastAlert = new Date(data.data[0].triggeredAt);
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            setHasRecentAlerts(lastAlert > oneDayAgo);
+          } else {
+            setHasRecentAlerts(false);
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+    };
+
+    checkRecentAlerts();
+    const interval = setInterval(checkRecentAlerts, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -93,8 +123,8 @@ export function Sidebar() {
                       {item.badge}
                     </span>
                   )}
-                  {item.hasNotification && (
-                    <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full status-warning" />
+                  {item.name === 'Alerts' && hasRecentAlerts && (
+                    <span className="ml-auto w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                   )}
                 </Link>
               );
