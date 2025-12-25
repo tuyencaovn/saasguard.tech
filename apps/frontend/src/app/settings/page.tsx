@@ -18,6 +18,10 @@ import {
   HardDrive,
   AlertTriangle,
   Settings,
+  Key,
+  Loader2,
+  X,
+  EyeOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +43,14 @@ export default function SettingsPage() {
   const isAdmin = currentUser?.role === 'admin';
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Change password modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
   useEffect(() => {
     fetchStatus();
@@ -80,6 +92,51 @@ export default function SettingsPage() {
     return `${m}m`;
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      setPasswordSuccess(true);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordSuccess(false);
+      }, 2000);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Failed to change password');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -108,20 +165,29 @@ export default function SettingsPage() {
 
           {/* Profile Card */}
           <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={cn(
-                'w-10 h-10 rounded-xl flex items-center justify-center border',
-                currentUser?.role === 'admin'
-                  ? 'bg-gradient-to-br from-violet-500/20 to-violet-600/10 border-violet-500/20'
-                  : 'bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 border-cyan-500/20'
-              )}>
-                {currentUser?.role === 'admin' ? (
-                  <Shield className="w-5 h-5 text-violet-400" />
-                ) : (
-                  <Eye className="w-5 h-5 text-cyan-400" />
-                )}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  'w-10 h-10 rounded-xl flex items-center justify-center border',
+                  currentUser?.role === 'admin'
+                    ? 'bg-gradient-to-br from-violet-500/20 to-violet-600/10 border-violet-500/20'
+                    : 'bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 border-cyan-500/20'
+                )}>
+                  {currentUser?.role === 'admin' ? (
+                    <Shield className="w-5 h-5 text-violet-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-cyan-400" />
+                  )}
+                </div>
+                <h2 className="text-lg font-semibold">Profile</h2>
               </div>
-              <h2 className="text-lg font-semibold">Profile</h2>
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                title="Change Password"
+              >
+                <Key className="w-4 h-4" />
+              </button>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -348,6 +414,132 @@ export default function SettingsPage() {
 
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !passwordSaving && setShowPasswordModal(false)}
+          />
+          <div className="relative glass-card rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center">
+                  <Key className="w-5 h-5 text-amber-400" />
+                </div>
+                <h2 className="text-lg font-semibold">Change Password</h2>
+              </div>
+              <button
+                onClick={() => !passwordSaving && setShowPasswordModal(false)}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {passwordSuccess ? (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3 text-emerald-400">
+                <CheckCircle2 className="w-5 h-5" />
+                Password changed successfully!
+              </div>
+            ) : (
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                {passwordError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-sm">
+                    <XCircle className="w-4 h-4 shrink-0" />
+                    {passwordError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm text-white/50 mb-2">Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      required
+                      className="w-full px-4 py-3 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    >
+                      {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-white/50 mb-2">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    >
+                      {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-white/50 mb-2">Confirm New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    >
+                      {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    disabled={passwordSaving}
+                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/60 hover:text-white transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={passwordSaving}
+                    className="btn-gradient px-4 py-2.5 text-white font-medium rounded-xl flex items-center gap-2"
+                  >
+                    {passwordSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                    Change Password
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

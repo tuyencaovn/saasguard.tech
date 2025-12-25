@@ -14,6 +14,7 @@ import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { PasswordReset } from './entities/password-reset.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -156,5 +157,26 @@ export class AuthService {
     await this.passwordResetRepo.save(passwordReset);
 
     return { message: 'Password reset successfully' };
+  }
+
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const user = await this.usersService.findOne(userId);
+
+    // Verify current password
+    const isPasswordValid = await this.usersService.validatePassword(
+      dto.currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Update password
+    await this.usersService.update(userId, { password: dto.newPassword });
+
+    return { message: 'Password changed successfully' };
   }
 }

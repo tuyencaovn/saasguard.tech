@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ConnectionStatus } from '@/components/connection-status';
 import {
   Mail,
@@ -44,9 +44,12 @@ type TabType = 'email' | 'telegram';
 export default function NotificationSettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isAdmin = user?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState<TabType>('email');
+  // Read tab from URL query param, default to 'email'
+  const initialTab = (searchParams.get('tab') as TabType) || 'email';
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
