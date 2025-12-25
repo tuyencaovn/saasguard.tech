@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'backend',
       cwd: './apps/backend',
-      script: 'pnpm',
-      args: 'start:dev',
+      script: 'npm',
+      args: 'run start:dev',
       watch: false,
       env: {
         NODE_ENV: 'development',
@@ -23,8 +23,8 @@ module.exports = {
     {
       name: 'frontend',
       cwd: './apps/frontend',
-      script: 'pnpm',
-      args: 'dev',
+      script: 'npm',
+      args: 'run dev',
       watch: false,
       env: {
         NODE_ENV: 'development',

@@ -28,23 +28,15 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
       envFilePath: '.env',
     }),
     // Security: Rate limiting to prevent brute force and DoS attacks
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000, // 1 second
-        limit: 10, // 10 requests per second
-      },
-      {
-        name: 'medium',
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
-      },
-      {
-        name: 'long',
-        ttl: 900000, // 15 minutes
-        limit: 500, // 500 requests per 15 minutes
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60000, // 1 minute
+          limit: 100, // 100 requests per minute (global default)
+        },
+      ],
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
