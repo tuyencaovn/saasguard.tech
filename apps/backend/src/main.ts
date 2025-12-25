@@ -9,8 +9,10 @@ async function bootstrap() {
   // Enable cookie parsing for JWT auth
   app.use(cookieParser());
 
+  // CORS - allow frontend URL from env
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3006';
   app.enableCors({
-    origin: ['http://localhost:3006'],
+    origin: [frontendUrl],
     credentials: true,
   });
 

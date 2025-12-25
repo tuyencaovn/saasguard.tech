@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { AlertsService } from './alerts.service';
 import { EmailService } from '../email/email.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { AlertThreshold, MetricName, NotificationChannel, Operator } from './entities/alert-threshold.entity';
 import { DeliveryStatus } from './entities/alert-log.entity';
 import { ConfigService } from '@nestjs/config';
@@ -19,6 +20,7 @@ export class AlertsScheduler {
   constructor(
     private readonly alertsService: AlertsService,
     private readonly emailService: EmailService,
+    private readonly telegramService: TelegramService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -102,8 +104,7 @@ export class AlertsScheduler {
           await this.sendEmailAlert(threshold, currentValue, email, log.id);
         }
       } else if (channel === NotificationChannel.TELEGRAM) {
-        // TODO: Implement Telegram notification
-        this.logger.warn('Telegram notification not implemented yet');
+        await this.sendTelegramAlert(threshold, currentValue, log.id);
       }
     }
   }
@@ -133,6 +134,28 @@ export class AlertsScheduler {
         error instanceof Error ? error.message : 'Unknown error',
       );
       this.logger.error(`Failed to send alert to ${to}`, error);
+    }
+  }
+
+  private async sendTelegramAlert(threshold: AlertThreshold, currentValue: number, logId: string) {
+    try {
+      const message = this.telegramService.buildAlertMessage(
+        threshold.metricName,
+        threshold.operator,
+        threshold.value,
+        currentValue,
+      );
+
+      const sent = await this.telegramService.sendAlertMessage(message);
+
+      // Update log status (note: for telegram we don't have specific recipient, just "telegram")
+      if (sent) {
+        this.logger.log(`✅ Telegram sent: ${threshold.metricName} at ${currentValue.toFixed(1)}%`);
+      } else {
+        this.logger.warn(`❌ Telegram failed: Not configured or disabled`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to send Telegram alert', error);
     }
   }
 

@@ -5,9 +5,13 @@ import { AlertsController } from './alerts.controller';
 import { AlertsScheduler } from './alerts.scheduler';
 import { AlertThreshold } from './entities/alert-threshold.entity';
 import { AlertLog } from './entities/alert-log.entity';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AlertThreshold, AlertLog])],
+  imports: [
+    TypeOrmModule.forFeature([AlertThreshold, AlertLog]),
+    TelegramModule,
+  ],
   controllers: [AlertsController],
   providers: [AlertsService, AlertsScheduler],
   exports: [AlertsService],

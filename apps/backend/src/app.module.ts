@@ -15,6 +15,8 @@ import { GatewaysModule } from './gateways/gateways.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { EmailModule } from './modules/email/email.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
+import { NotificationSettingsModule } from './modules/notification-settings/notification-settings.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 
@@ -41,7 +43,9 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
+    NotificationSettingsModule,
     EmailModule,
+    TelegramModule,
     AuthModule,
     InvitationsModule,
     UsersModule,

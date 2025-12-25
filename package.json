@@ -12,6 +12,11 @@
     "dev:backend": "pnpm --filter backend run start:dev",
     "dev:frontend": "pnpm --filter frontend run dev",
     "build": "pnpm -r run build",
+    "start": "pm2 start ecosystem.config.prod.js",
+    "start:logs": "pm2 logs",
+    "start:stop": "pm2 stop all",
+    "start:restart": "pm2 reload all",
+    "start:status": "pm2 status",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down"
   },

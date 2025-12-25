@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import { ConnectionStatus } from '@/components/connection-status';
 import {
   Mail,
@@ -16,6 +17,7 @@ import {
   Gauge,
   HardDrive,
   AlertTriangle,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +35,8 @@ interface SystemStatus {
 
 export default function SettingsPage() {
   const { user: currentUser } = useAuth();
+  const router = useRouter();
+  const isAdmin = currentUser?.role === 'admin';
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -197,11 +201,22 @@ export default function SettingsPage() {
 
           {/* Email Card */}
           <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/20 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-pink-400" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/20 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-pink-400" />
+                </div>
+                <h2 className="text-lg font-semibold">Email</h2>
               </div>
-              <h2 className="text-lg font-semibold">Email</h2>
+              {isAdmin && (
+                <button
+                  onClick={() => router.push('/settings/notification-settings')}
+                  className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  title="Configure"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -219,11 +234,22 @@ export default function SettingsPage() {
 
           {/* Telegram Card */}
           <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-sky-600/10 border border-sky-500/20 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-sky-400" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-sky-600/10 border border-sky-500/20 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-sky-400" />
+                </div>
+                <h2 className="text-lg font-semibold">Telegram</h2>
               </div>
-              <h2 className="text-lg font-semibold">Telegram</h2>
+              {isAdmin && (
+                <button
+                  onClick={() => router.push('/settings/notification-settings?tab=telegram')}
+                  className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  title="Configure"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -298,6 +324,27 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Configure Notifications Card - Admin Only */}
+          {isAdmin && (
+            <div
+              onClick={() => router.push('/settings/notification-settings')}
+              className="glass-card rounded-2xl p-6 cursor-pointer hover:bg-white/5 transition-all border-2 border-dashed border-white/10 hover:border-violet-500/30"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-violet-400" />
+                </div>
+                <h2 className="text-lg font-semibold">Notifications</h2>
+              </div>
+              <p className="text-sm text-white/50">
+                Configure Email (SMTP) and Telegram notification settings
+              </p>
+              <div className="mt-4 text-sm text-violet-400 flex items-center gap-2">
+                <span>Configure →</span>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

@@ -51,7 +51,10 @@
       "Skill(ui-ux-pro-max)",
       "Bash(node evaluate.js:*)",
       "Bash(node /tmp/screenshot-login.js:*)",
-      "Bash(pnpm exec tsc:*)"
+      "Bash(pnpm exec tsc:*)",
+      "Bash(node /Users/tuyencao/workspace/bimnext_monitor/.claude/skills/plans-kanban/scripts/server.cjs:*)",
+      "Bash(node:*)",
+      "Bash(docker ps:*)"
     ]
   }
 }
