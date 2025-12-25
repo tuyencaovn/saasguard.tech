@@ -9,7 +9,6 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
-import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
@@ -149,9 +148,8 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
-    // Update user password
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    await this.usersService.update(passwordReset.userId, { password: hashedPassword });
+    // Update user password (don't hash here - usersService.update will hash it)
+    await this.usersService.update(passwordReset.userId, { password: dto.password });
 
     // Mark token as used
     passwordReset.usedAt = new Date();
