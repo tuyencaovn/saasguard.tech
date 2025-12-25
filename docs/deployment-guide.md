@@ -4,10 +4,24 @@ Quick deployment guide for BimNext Server Monitor on host machine using PM2.
 
 ## Prerequisites
 
-- Node.js >= 20.x
-- pnpm >= 9.x
+- Node.js >= 20.x (use NVM if needed)
 - PM2 (`npm install -g pm2`)
 - Docker & Docker Compose (for PostgreSQL)
+
+## Install Node 20 (if needed)
+
+```bash
+# Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.bashrc
+
+# Install Node 20
+nvm install 20
+nvm alias default 20
+
+# Verify
+node --version
+```
 
 ## Quick Deploy
 
@@ -16,7 +30,12 @@ Quick deployment guide for BimNext Server Monitor on host machine using PM2.
 ```bash
 git clone <repo-url> bimnext_monitor
 cd bimnext_monitor
-pnpm install
+
+# Create .npmrc to handle peer deps
+echo "legacy-peer-deps=true" > .npmrc
+
+# Install dependencies
+npm install
 ```
 
 ### 2. Setup Database
@@ -73,14 +92,19 @@ NEXT_PUBLIC_WS_URL=https://api.monitor.yourdomain.com
 ### 4. Build
 
 ```bash
-pnpm build
+# Build all apps
+npm run build
+
+# Nếu lỗi, build từng app:
+cd apps/backend && npm install --legacy-peer-deps && npm run build
+cd ../frontend && npm install --legacy-peer-deps && npm run build
 ```
 
 ### 5. Create Admin User
 
 ```bash
 cd apps/backend
-pnpm seed:admin
+npm run seed:admin
 ```
 
 Nhập email và password cho admin account.
@@ -88,6 +112,9 @@ Nhập email và password cho admin account.
 ### 6. Start with PM2
 
 ```bash
+# Install PM2 globally
+npm install -g pm2
+
 # Start production
 pm2 start ecosystem.config.prod.js
 
@@ -176,8 +203,8 @@ sudo certbot --nginx -d monitor.yourdomain.com -d api.monitor.yourdomain.com
 ```bash
 cd bimnext_monitor
 git pull
-pnpm install
-pnpm build
+npm install --legacy-peer-deps
+npm run build
 pm2 reload all
 ```
 
@@ -198,6 +225,11 @@ docker exec bimnext_postgres psql -U monitor -d bimnext_monitor -c "SELECT 1"
 ```bash
 pm2 delete all
 pm2 start ecosystem.config.prod.js
+```
+
+### npm install lỗi peer deps
+```bash
+npm install --legacy-peer-deps
 ```
 
 ## Environment Variables Reference
