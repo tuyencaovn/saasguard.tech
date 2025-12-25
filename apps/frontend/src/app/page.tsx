@@ -214,7 +214,7 @@ export default function DashboardPage() {
                 value={metrics.disk[0]?.usagePercent ?? 0}
                 thresholds={{ warning: 85, critical: 95 }}
                 color="amber"
-                subtitle={metrics.disk[0]?.mount || '/'}
+                subtitle={metrics.disk[0] ? `${formatBytes(metrics.disk[0].used)} / ${formatBytes(metrics.disk[0].size)}` : '/'}
               />
 
               {/* Network Card */}
