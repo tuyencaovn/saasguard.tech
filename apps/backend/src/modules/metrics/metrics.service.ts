@@ -77,13 +77,17 @@ export class MetricsService {
         txPerSec = primaryNet.tx_sec || 0;
       }
 
+      // Speed can be -1 when not detected, treat as 0
+      const interfaceSpeed = primaryInterface?.speed;
+      const validSpeed = interfaceSpeed && interfaceSpeed > 0 ? interfaceSpeed : 0;
+
       const network: NetworkMetrics = {
         interface: primaryNet?.iface || 'unknown',
         rx: Math.round(rxPerSec),
         tx: Math.round(txPerSec),
         rxTotal: primaryNet?.rx_bytes || 0,
         txTotal: primaryNet?.tx_bytes || 0,
-        speed: primaryInterface?.speed || 0,
+        speed: validSpeed,
       };
 
       this.cachedMetrics = {

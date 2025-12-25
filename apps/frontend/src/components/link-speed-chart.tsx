@@ -99,10 +99,22 @@ export function LinkSpeedChart({ data, timeRange, interfaceName = 'eth0' }: Link
     };
   }, [timeRange, data]);
 
+  // No data or all speeds are 0 (not detected)
+  const hasValidData = data.length > 0 && data.some(d => d.speed > 0);
+
   if (data.length === 0) {
     return (
       <div className="h-48 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center">
         <span className="text-zinc-600 text-sm">Collecting link speed data...</span>
+      </div>
+    );
+  }
+
+  if (!hasValidData) {
+    return (
+      <div className="h-48 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-center flex-col gap-2">
+        <span className="text-zinc-500 text-sm">Link speed not available</span>
+        <span className="text-zinc-600 text-xs">Interface may not report negotiated speed</span>
       </div>
     );
   }
