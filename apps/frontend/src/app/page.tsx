@@ -287,7 +287,10 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="text-center text-white/40 text-xs mt-4">
-                  {metrics.network?.interface || 'eth0'} - {metrics.network?.speed ? `${metrics.network.speed >= 1000 ? `${metrics.network.speed / 1000} Gbps` : `${metrics.network.speed} Mbps`}` : 'Unknown'}
+                  {metrics.network?.interface || 'eth0'}
+                  {metrics.network?.speed && metrics.network.speed > 0 && (
+                    <span> - {metrics.network.speed >= 1000 ? `${metrics.network.speed / 1000} Gbps` : `${metrics.network.speed} Mbps`}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -383,43 +386,50 @@ export default function DashboardPage() {
             </div>
 
             {/* Network Charts Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-              {/* Network Traffic Chart */}
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold">Network Traffic</h3>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-white/60">Download</span>
+            {(() => {
+              const hasLinkSpeed = linkSpeedHistory.some(d => d.speed > 0);
+              return (
+                <div className={`grid grid-cols-1 ${hasLinkSpeed ? 'xl:grid-cols-2' : ''} gap-6 mb-8`}>
+                  {/* Network Traffic Chart */}
+                  <div className="glass-card rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold">Network Traffic</h3>
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-blue-500" />
+                          <span className="text-white/60">Download</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                          <span className="text-white/60">Upload</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                      <span className="text-white/60">Upload</span>
-                    </div>
+                    <NetworkChart data={networkHistory} timeRange={timeRange} />
                   </div>
-                </div>
-                <NetworkChart data={networkHistory} timeRange={timeRange} />
-              </div>
 
-              {/* Interface Link Speed Chart */}
-              <div className="glass-card rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold">Link Speed</h3>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-violet-500" />
-                      <span className="text-white/60">{metrics.network?.interface || 'eth0'}</span>
+                  {/* Interface Link Speed Chart - only show if data available */}
+                  {hasLinkSpeed && (
+                    <div className="glass-card rounded-2xl p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-semibold">Link Speed</h3>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-violet-500" />
+                            <span className="text-white/60">{metrics.network?.interface || 'eth0'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <LinkSpeedChart
+                        data={linkSpeedHistory}
+                        timeRange={timeRange}
+                        interfaceName={metrics.network?.interface || 'eth0'}
+                      />
                     </div>
-                  </div>
+                  )}
                 </div>
-                <LinkSpeedChart
-                  data={linkSpeedHistory}
-                  timeRange={timeRange}
-                  interfaceName={metrics.network?.interface || 'eth0'}
-                />
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Container Overview */}
             <div className="glass-card rounded-2xl p-6">
