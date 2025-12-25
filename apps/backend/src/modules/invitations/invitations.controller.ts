@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { InvitationsService } from './invitations.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { SetPasswordDto } from './dto/set-password.dto';
@@ -67,14 +68,19 @@ export class InvitationsController {
   // Public - validate token (for set-password page)
   @Public()
   @Get(':token/validate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute
   async validateToken(@Param('token') token: string) {
     return this.invitationsService.validateToken(token);
   }
 
-  // Public - set password using invitation token
+  /**
+   * Set password using invitation token with rate limiting
+   * Limit: 5 attempts per 15 minutes per IP
+   */
   @Public()
   @Post(':token/set-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 per 15 minutes
   async setPassword(
     @Param('token') token: string,
     @Body() dto: SetPasswordDto,

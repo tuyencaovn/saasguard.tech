@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Res, Get, Query, HttpCode, HttpStatus, Patch } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -21,9 +22,14 @@ const COOKIE_OPTIONS = {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * Login endpoint with strict rate limiting to prevent brute force attacks
+   * Limit: 5 attempts per 15 minutes per IP
+   */
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
@@ -53,28 +59,44 @@ export class AuthController {
     return { user };
   }
 
+  /**
+   * Forgot password endpoint with rate limiting to prevent abuse/enumeration
+   * Limit: 3 attempts per 15 minutes per IP
+   */
   @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 900000 } }) // 3 attempts per 15 minutes
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Public()
   @Get('reset-password/validate')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute
   async validateResetToken(@Query('token') token: string) {
     return this.authService.validateResetToken(token);
   }
 
+  /**
+   * Reset password endpoint with rate limiting
+   * Limit: 5 attempts per 15 minutes per IP
+   */
   @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
+  /**
+   * Change password endpoint with rate limiting
+   * Limit: 5 attempts per 15 minutes per user
+   */
   @Patch('change-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
   async changePassword(
     @CurrentUser() user: CurrentUserData,
     @Body() dto: ChangePasswordDto,

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +27,24 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // Security: Rate limiting to prevent brute force and DoS attacks
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+      {
+        name: 'long',
+        ttl: 900000, // 15 minutes
+        limit: 500, // 500 requests per 15 minutes
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -58,7 +77,8 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
   controllers: [AppController],
   providers: [
     AppService,
-    // Global guards - all routes require auth by default
+    // Global guards - order matters: throttler -> auth -> roles
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

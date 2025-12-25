@@ -8,7 +8,17 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import type { SystemMetrics, DockerEvent } from '../modules/metrics/types/metrics.types';
+
+interface AuthenticatedSocket extends Socket {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
 
 @WebSocketGateway({
   cors: {
@@ -23,18 +33,68 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   private readonly logger = new Logger(MetricsGateway.name);
   private lastMetrics: SystemMetrics | null = null;
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  /**
+   * Authenticate WebSocket connection using JWT from cookie or auth header
+   */
+  async handleConnection(client: AuthenticatedSocket) {
+    try {
+      // Try to get token from cookie first (preferred)
+      let token = client.handshake.headers.cookie
+        ?.split(';')
+        .find((c) => c.trim().startsWith('access_token='))
+        ?.split('=')[1];
+
+      // Fallback to auth header
+      if (!token) {
+        const authHeader = client.handshake.headers.authorization;
+        if (authHeader?.startsWith('Bearer ')) {
+          token = authHeader.substring(7);
+        }
+      }
+
+      if (!token) {
+        this.logger.warn(`Client ${client.id} connection rejected: No token provided`);
+        client.emit('error', { message: 'Authentication required' });
+        client.disconnect();
+        return;
+      }
+
+      // Verify JWT token
+      const secret = this.configService.get<string>('JWT_SECRET') || 'default-dev-secret-change-in-production';
+      const payload = this.jwtService.verify(token, { secret });
+
+      // Attach user to socket for future reference
+      client.user = {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role,
+      };
+
+      this.logger.log(`Client ${client.id} connected (user: ${payload.email})`);
+    } catch (error) {
+      this.logger.warn(`Client ${client.id} connection rejected: Invalid token`);
+      client.emit('error', { message: 'Invalid authentication token' });
+      client.disconnect();
+    }
   }
 
-  handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+  handleDisconnect(client: AuthenticatedSocket) {
+    this.logger.log(`Client ${client.id} disconnected (user: ${client.user?.email || 'unknown'})`);
   }
 
   @SubscribeMessage('subscribe:metrics')
-  handleSubscribeMetrics(@ConnectedSocket() client: Socket) {
+  handleSubscribeMetrics(@ConnectedSocket() client: AuthenticatedSocket) {
+    if (!client.user) {
+      return { event: 'error', data: { message: 'Not authenticated' } };
+    }
+
     client.join('metrics-room');
-    this.logger.debug(`Client ${client.id} subscribed to metrics`);
+    this.logger.debug(`Client ${client.id} (${client.user.email}) subscribed to metrics`);
     // Send last known metrics immediately to new subscriber
     if (this.lastMetrics) {
       client.emit('metrics:update', this.lastMetrics);
@@ -43,20 +103,24 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   @SubscribeMessage('subscribe:docker')
-  handleSubscribeDocker(@ConnectedSocket() client: Socket) {
+  handleSubscribeDocker(@ConnectedSocket() client: AuthenticatedSocket) {
+    if (!client.user) {
+      return { event: 'error', data: { message: 'Not authenticated' } };
+    }
+
     client.join('docker-room');
-    this.logger.debug(`Client ${client.id} subscribed to docker`);
+    this.logger.debug(`Client ${client.id} (${client.user.email}) subscribed to docker`);
     return { event: 'subscribed', data: { room: 'docker' } };
   }
 
   @SubscribeMessage('unsubscribe:metrics')
-  handleUnsubscribeMetrics(@ConnectedSocket() client: Socket) {
+  handleUnsubscribeMetrics(@ConnectedSocket() client: AuthenticatedSocket) {
     client.leave('metrics-room');
     return { event: 'unsubscribed', data: { room: 'metrics' } };
   }
 
   @SubscribeMessage('unsubscribe:docker')
-  handleUnsubscribeDocker(@ConnectedSocket() client: Socket) {
+  handleUnsubscribeDocker(@ConnectedSocket() client: AuthenticatedSocket) {
     client.leave('docker-room');
     return { event: 'unsubscribed', data: { room: 'docker' } };
   }

@@ -1,10 +1,13 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsString } from 'class-validator';
+import { IsStrongPassword } from '../../../common/validators/password.validator';
 
 export class ResetPasswordDto {
   @IsString()
   token: string;
 
   @IsString()
-  @MinLength(8)
+  @IsStrongPassword({
+    message: 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character',
+  })
   password: string;
 }

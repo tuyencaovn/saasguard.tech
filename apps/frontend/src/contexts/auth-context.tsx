@@ -65,6 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!res.ok) {
+      // Handle rate limiting (HTTP 429)
+      if (res.status === 429) {
+        throw new Error('Too many login attempts. Please try again in 15 minutes.');
+      }
       const error = await res.json();
       throw new Error(error.message || 'Login failed');
     }
