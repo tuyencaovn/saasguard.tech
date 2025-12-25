@@ -70,7 +70,7 @@ bimnext_monitor/
 ├── docker-compose.yml           # PostgreSQL container setup
 ├── ecosystem.config.js          # PM2 configuration
 ├── package.json                 # Root package manager
-├── pnpm-workspace.yaml          # Workspace configuration
+├── .npmrc                       # npm configuration
 └── README.md                    # Quick start guide
 ```
 
@@ -311,13 +311,13 @@ DELETE /alerts/thresholds/:id          # Delete threshold
 
 **Commands:**
 ```bash
-pnpm install            # Install all dependencies
-pnpm dev                # Start PostgreSQL + Backend + Frontend
-pnpm dev:logs           # View PM2 logs
-pnpm dev:stop           # Stop services
-pnpm dev:restart        # Restart services
-pnpm db:up              # Start PostgreSQL only
-pnpm db:down            # Stop PostgreSQL
+npm install             # Install all dependencies
+npm run dev             # Start PostgreSQL + Backend + Frontend
+npm run dev:logs        # View PM2 logs
+npm run dev:stop        # Stop services
+npm run dev:restart     # Restart services
+npm run db:up           # Start PostgreSQL only
+npm run db:down         # Stop PostgreSQL
 ```
 
 **Environment Variables:**

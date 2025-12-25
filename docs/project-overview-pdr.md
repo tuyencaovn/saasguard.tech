@@ -449,9 +449,9 @@ Response: 200 OK
 
 ### Development
 ```bash
-pnpm dev          # Start all services
-pnpm dev:logs     # View logs
-pnpm dev:stop     # Stop services
+npm run dev          # Start all services
+npm run dev:logs     # View logs
+npm run dev:stop     # Stop services
 ```
 
 ### Production (Future)

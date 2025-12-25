@@ -23,16 +23,16 @@ Server monitoring web application with real-time metrics, Docker monitoring, and
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Start development (PostgreSQL + Backend + Frontend)
-pnpm dev
+npm run dev
 
 # View logs
-pnpm dev:logs
+npm run dev:logs
 
 # Stop services
-pnpm dev:stop
+npm run dev:stop
 ```
 
 ## Service Ports
@@ -59,9 +59,9 @@ bimnext_monitor/
 
 ## Documentation
 
+- [Deployment Guide](./docs/deployment-guide.md)
 - [Tech Stack](./docs/tech-stack.md)
 - [Design Guidelines](./docs/design-guidelines.md)
-- [Implementation Plan](./plans/251223-1942-server-monitor/plan.md)
 
 ## Wireframes
 

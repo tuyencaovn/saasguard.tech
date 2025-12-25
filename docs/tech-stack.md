@@ -153,12 +153,12 @@ NEXT_PUBLIC_WS_URL=http://localhost:3005
 ## Development Commands
 
 ```bash
-pnpm dev          # Start all (PostgreSQL + BE + FE via PM2)
-pnpm dev:logs     # View PM2 logs
-pnpm dev:stop     # Stop BE & FE
-pnpm dev:restart  # Restart BE & FE
-pnpm db:up        # Start PostgreSQL only
-pnpm db:down      # Stop PostgreSQL
+npm run dev          # Start all (PostgreSQL + BE + FE via PM2)
+npm run dev:logs     # View PM2 logs
+npm run dev:stop     # Stop BE & FE
+npm run dev:restart  # Restart BE & FE
+npm run db:up        # Start PostgreSQL only
+npm run db:down      # Stop PostgreSQL
 ```
 
 ## Implemented Features
@@ -225,6 +225,6 @@ pnpm db:down      # Stop PostgreSQL
 ## Development Requirements
 
 - Node.js >= 20.x
-- pnpm >= 9.x (package manager)
+- npm (package manager)
 - Docker >= 24.x (for PostgreSQL container)
 - PM2 (process manager for dev)
