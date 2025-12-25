@@ -51,6 +51,10 @@ export class MetricsHistory {
   @Column('bigint', { default: 0 })
   networkTx: number;
 
+  // Network interface link speed (Mbps)
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  networkSpeed: number;
+
   @Column()
   timestamp: Date;
 

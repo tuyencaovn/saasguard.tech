@@ -6,6 +6,7 @@ import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
 import { PerformanceChart } from '@/components/performance-chart';
 import { NetworkChart } from '@/components/network-chart';
+import { LinkSpeedChart } from '@/components/link-speed-chart';
 import { formatBytes, formatUptime } from '@/lib/utils';
 import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer, Wifi, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
@@ -22,6 +23,11 @@ interface NetworkDataPoint {
   timestamp: number;
   rx: number;
   tx: number;
+}
+
+interface LinkSpeedDataPoint {
+  timestamp: number;
+  speed: number; // Mbps
 }
 
 type TimeRange = '15m' | '1h' | '6h' | '24h';
@@ -43,10 +49,10 @@ function formatNetworkSpeed(bytesPerSec: number): string {
 }
 
 // Fetch metrics history from API
-async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[] }> {
+async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/metrics/history?minutes=${minutes}`);
-    if (!res.ok) return { metrics: [], network: [] };
+    if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
     const data = await res.json();
     const metrics = data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
       timestamp: new Date(item.timestamp).getTime(),
@@ -59,9 +65,13 @@ async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsD
       rx: Number(item.networkRx || 0),
       tx: Number(item.networkTx || 0),
     }));
-    return { metrics, network };
+    const linkSpeed = data.map((item: { timestamp: string; networkSpeed?: number }) => ({
+      timestamp: new Date(item.timestamp).getTime(),
+      speed: Number(item.networkSpeed || 0),
+    }));
+    return { metrics, network, linkSpeed };
   } catch {
-    return { metrics: [], network: [] };
+    return { metrics: [], network: [], linkSpeed: [] };
   }
 }
 
@@ -70,6 +80,7 @@ export default function DashboardPage() {
   const { containers, refetch: refetchContainers } = useDockerEvents();
   const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
   const [networkHistory, setNetworkHistory] = useState<NetworkDataPoint[]>([]);
+  const [linkSpeedHistory, setLinkSpeedHistory] = useState<LinkSpeedDataPoint[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('15m');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
@@ -80,9 +91,10 @@ export default function DashboardPage() {
     if (historyLoadedRef.current === timeRange) return;
 
     const config = TIME_RANGE_CONFIG[timeRange];
-    fetchMetricsHistory(config.minutes).then(({ metrics: metricsData, network: networkData }) => {
+    fetchMetricsHistory(config.minutes).then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
       setMetricsHistory(metricsData);
       setNetworkHistory(networkData);
+      setLinkSpeedHistory(linkSpeedData);
       historyLoadedRef.current = timeRange;
     });
   }, [timeRange]);
@@ -124,6 +136,23 @@ export default function DashboardPage() {
           timestamp: now,
           rx: metrics.network?.rx ?? 0,
           tx: metrics.network?.tx ?? 0,
+        };
+
+        const cutoffTime = now - config.minutes * 60 * 1000;
+        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
+        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
+      });
+
+      // Also update link speed history
+      setLinkSpeedHistory((prev) => {
+        const lastPoint = prev[prev.length - 1];
+        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
+          return prev;
+        }
+
+        const dataPoint: LinkSpeedDataPoint = {
+          timestamp: now,
+          speed: metrics.network?.speed ?? 0,
         };
 
         const cutoffTime = now - config.minutes * 60 * 1000;
@@ -353,22 +382,43 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Network Traffic Chart */}
-            <div className="glass-card rounded-2xl p-6 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold">Network Traffic</h3>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span className="text-white/60">Download</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                    <span className="text-white/60">Upload</span>
+            {/* Network Charts Row */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+              {/* Network Traffic Chart */}
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold">Network Traffic</h3>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="text-white/60">Download</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-emerald-500" />
+                      <span className="text-white/60">Upload</span>
+                    </div>
                   </div>
                 </div>
+                <NetworkChart data={networkHistory} timeRange={timeRange} />
               </div>
-              <NetworkChart data={networkHistory} timeRange={timeRange} />
+
+              {/* Interface Link Speed Chart */}
+              <div className="glass-card rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold">Link Speed</h3>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-violet-500" />
+                      <span className="text-white/60">{metrics.network?.interface || 'eth0'}</span>
+                    </div>
+                  </div>
+                </div>
+                <LinkSpeedChart
+                  data={linkSpeedHistory}
+                  timeRange={timeRange}
+                  interfaceName={metrics.network?.interface || 'eth0'}
+                />
+              </div>
             </div>
 
             {/* Container Overview */}

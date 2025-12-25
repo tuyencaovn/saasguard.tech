@@ -9,7 +9,6 @@ import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics, UptimeMetrics, Netw
 export class MetricsService {
   private readonly logger = new Logger(MetricsService.name);
   private cachedMetrics: SystemMetrics | null = null;
-  private lastNetworkStats: { rx: number; tx: number; timestamp: number } | null = null;
 
   constructor(
     @InjectRepository(MetricsHistory)
@@ -69,24 +68,13 @@ export class MetricsService {
         ? netInterfaces.find((i) => i.iface === primaryNet?.iface)
         : null;
 
-      const now = Date.now();
       let rxPerSec = 0;
       let txPerSec = 0;
 
-      if (this.lastNetworkStats && primaryNet) {
-        const timeDiff = (now - this.lastNetworkStats.timestamp) / 1000; // seconds
-        if (timeDiff > 0) {
-          rxPerSec = Math.max(0, (primaryNet.rx_bytes - this.lastNetworkStats.rx) / timeDiff);
-          txPerSec = Math.max(0, (primaryNet.tx_bytes - this.lastNetworkStats.tx) / timeDiff);
-        }
-      }
-
+      // systeminformation provides rx_sec and tx_sec (bytes per second)
       if (primaryNet) {
-        this.lastNetworkStats = {
-          rx: primaryNet.rx_bytes,
-          tx: primaryNet.tx_bytes,
-          timestamp: now,
-        };
+        rxPerSec = primaryNet.rx_sec || 0;
+        txPerSec = primaryNet.tx_sec || 0;
       }
 
       const network: NetworkMetrics = {
@@ -152,6 +140,7 @@ export class MetricsService {
       diskDetails: metrics.disk,
       networkRx: metrics.network.rx,
       networkTx: metrics.network.tx,
+      networkSpeed: metrics.network.speed,
       timestamp: metrics.timestamp,
     });
     return this.historyRepository.save(history);
