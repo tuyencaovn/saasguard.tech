@@ -39,9 +39,9 @@ export class MetricsService {
 
       const ram: RamMetrics = {
         total: mem.total,
-        used: mem.used,
-        free: mem.free,
-        usagePercent: Math.round((mem.used / mem.total) * 10000) / 100,
+        used: mem.total - mem.available, // actual used = total - available
+        free: mem.available, // available memory (includes reclaimable cache)
+        usagePercent: Math.round(((mem.total - mem.available) / mem.total) * 10000) / 100,
       };
 
       // Filter main disk partitions (exclude small/system partitions)
