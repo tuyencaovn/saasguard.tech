@@ -10,6 +10,7 @@ import {
   Terminal,
   Play,
   Square,
+  StopCircle,
   RotateCcw,
   Search,
   RefreshCw,
@@ -525,7 +526,7 @@ export default function PM2Page() {
                                   {actionInProgress === `${proc.pm_id}-stop` ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                   ) : (
-                                    <Square className="w-4 h-4" />
+                                    <StopCircle className="w-4 h-4" />
                                   )}
                                 </button>
                               ) : (
@@ -662,7 +663,7 @@ export default function PM2Page() {
                               {actionInProgress === `${proc.pm_id}-stop` ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : (
-                                <Square className="w-3.5 h-3.5" />
+                                <StopCircle className="w-3.5 h-3.5" />
                               )}
                             </button>
                           ) : (
