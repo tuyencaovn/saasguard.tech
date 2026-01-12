@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { ConnectionStatus } from '@/components/connection-status';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { formatUptime } from '@/lib/utils';
 import type { PM2Process } from '@/types/metrics';
 import {
@@ -175,6 +176,11 @@ export default function PM2Page() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [logsProcess, setLogsProcess] = useState<{ id: number; name: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    pmId: number;
+    name: string;
+    action: 'stop' | 'restart';
+  } | null>(null);
 
   const fetchProcesses = useCallback(async () => {
     try {
@@ -216,10 +222,26 @@ export default function PM2Page() {
         alert(error instanceof Error ? error.message : `Failed to ${action} process`);
       } finally {
         setActionInProgress(null);
+        setConfirmAction(null);
       }
     },
     [fetchProcesses]
   );
+
+  // Request confirmation for stop/restart actions
+  const requestConfirmAction = useCallback(
+    (pmId: number, name: string, action: 'stop' | 'restart') => {
+      setConfirmAction({ pmId, name, action });
+    },
+    []
+  );
+
+  // Execute confirmed action
+  const handleConfirmAction = useCallback(() => {
+    if (confirmAction) {
+      performAction(confirmAction.pmId, confirmAction.action);
+    }
+  }, [confirmAction, performAction]);
 
   const filteredProcesses = useMemo(() => {
     return processes.filter((proc) => {
@@ -495,7 +517,7 @@ export default function PM2Page() {
                             <>
                               {proc.status === 'online' ? (
                                 <button
-                                  onClick={() => performAction(proc.pm_id, 'stop')}
+                                  onClick={() => requestConfirmAction(proc.pm_id, proc.name, 'stop')}
                                   disabled={actionInProgress === `${proc.pm_id}-stop`}
                                   className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
                                   title="Stop"
@@ -521,7 +543,7 @@ export default function PM2Page() {
                                 </button>
                               )}
                               <button
-                                onClick={() => performAction(proc.pm_id, 'restart')}
+                                onClick={() => requestConfirmAction(proc.pm_id, proc.name, 'restart')}
                                 disabled={
                                   actionInProgress === `${proc.pm_id}-restart` ||
                                   proc.status !== 'online'
@@ -632,7 +654,7 @@ export default function PM2Page() {
                         <>
                           {proc.status === 'online' ? (
                             <button
-                              onClick={() => performAction(proc.pm_id, 'stop')}
+                              onClick={() => requestConfirmAction(proc.pm_id, proc.name, 'stop')}
                               disabled={actionInProgress === `${proc.pm_id}-stop`}
                               className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
                               title="Stop"
@@ -658,7 +680,7 @@ export default function PM2Page() {
                             </button>
                           )}
                           <button
-                            onClick={() => performAction(proc.pm_id, 'restart')}
+                            onClick={() => requestConfirmAction(proc.pm_id, proc.name, 'restart')}
                             disabled={
                               actionInProgress === `${proc.pm_id}-restart` ||
                               proc.status !== 'online'
@@ -705,6 +727,22 @@ export default function PM2Page() {
         processName={logsProcess?.name || ''}
         isOpen={!!logsProcess}
         onClose={() => setLogsProcess(null)}
+      />
+
+      {/* Confirm Dialog for Stop/Restart */}
+      <ConfirmDialog
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+        title={confirmAction?.action === 'stop' ? 'Stop Process' : 'Restart Process'}
+        message={
+          confirmAction?.action === 'stop'
+            ? `Are you sure you want to stop "${confirmAction?.name}"? This will interrupt the service.`
+            : `Are you sure you want to restart "${confirmAction?.name}"? This will cause brief downtime.`
+        }
+        confirmText={confirmAction?.action === 'stop' ? 'Stop' : 'Restart'}
+        variant={confirmAction?.action === 'stop' ? 'danger' : 'warning'}
+        isLoading={!!actionInProgress}
       />
     </div>
   );

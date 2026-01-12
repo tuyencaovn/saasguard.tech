@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useDockerEvents } from '@/hooks/use-socket';
 import { useAuth } from '@/contexts/auth-context';
 import { ConnectionStatus } from '@/components/connection-status';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { formatTime, formatUptime } from '@/lib/utils';
 
 // Calculate container uptime from startedAt
@@ -65,6 +66,11 @@ export default function ContainersPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [logsContainer, setLogsContainer] = useState<{ id: string; name: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    containerId: string;
+    name: string;
+    action: 'stop' | 'restart';
+  } | null>(null);
 
   // Container actions
   const performContainerAction = useCallback(async (containerId: string, action: 'start' | 'stop' | 'restart') => {
@@ -86,8 +92,24 @@ export default function ContainersPage() {
       alert(error instanceof Error ? error.message : `Failed to ${action} container`);
     } finally {
       setActionInProgress(null);
+      setConfirmAction(null);
     }
   }, [refetch]);
+
+  // Request confirmation for stop/restart actions
+  const requestConfirmAction = useCallback(
+    (containerId: string, name: string, action: 'stop' | 'restart') => {
+      setConfirmAction({ containerId, name, action });
+    },
+    []
+  );
+
+  // Execute confirmed action
+  const handleConfirmAction = useCallback(() => {
+    if (confirmAction) {
+      performContainerAction(confirmAction.containerId, confirmAction.action);
+    }
+  }, [confirmAction, performContainerAction]);
 
   // Filter containers based on status and search query
   const filteredContainers = useMemo(() => {
@@ -361,7 +383,7 @@ export default function ContainersPage() {
                             <>
                               {container.state === 'running' ? (
                                 <button
-                                  onClick={() => performContainerAction(container.id, 'stop')}
+                                  onClick={() => requestConfirmAction(container.id, container.name, 'stop')}
                                   disabled={actionInProgress === `${container.id}-stop`}
                                   className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
                                   title="Stop"
@@ -387,7 +409,7 @@ export default function ContainersPage() {
                                 </button>
                               )}
                               <button
-                                onClick={() => performContainerAction(container.id, 'restart')}
+                                onClick={() => requestConfirmAction(container.id, container.name, 'restart')}
                                 disabled={actionInProgress === `${container.id}-restart` || container.state !== 'running'}
                                 className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400 disabled:opacity-50"
                                 title="Restart"
@@ -475,7 +497,7 @@ export default function ContainersPage() {
                         <>
                           {container.state === 'running' ? (
                             <button
-                              onClick={() => performContainerAction(container.id, 'stop')}
+                              onClick={() => requestConfirmAction(container.id, container.name, 'stop')}
                               disabled={actionInProgress === `${container.id}-stop`}
                               className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-red-400 disabled:opacity-50"
                               title="Stop"
@@ -501,7 +523,7 @@ export default function ContainersPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => performContainerAction(container.id, 'restart')}
+                            onClick={() => requestConfirmAction(container.id, container.name, 'restart')}
                             disabled={actionInProgress === `${container.id}-restart` || container.state !== 'running'}
                             className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-blue-400 disabled:opacity-50"
                             title="Restart"
@@ -582,6 +604,22 @@ export default function ContainersPage() {
         containerName={logsContainer?.name || ''}
         isOpen={!!logsContainer}
         onClose={() => setLogsContainer(null)}
+      />
+
+      {/* Confirm Dialog for Stop/Restart */}
+      <ConfirmDialog
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmAction}
+        title={confirmAction?.action === 'stop' ? 'Stop Container' : 'Restart Container'}
+        message={
+          confirmAction?.action === 'stop'
+            ? `Are you sure you want to stop "${confirmAction?.name}"? This will interrupt the service.`
+            : `Are you sure you want to restart "${confirmAction?.name}"? This will cause brief downtime.`
+        }
+        confirmText={confirmAction?.action === 'stop' ? 'Stop' : 'Restart'}
+        variant={confirmAction?.action === 'stop' ? 'danger' : 'warning'}
+        isLoading={!!actionInProgress}
       />
     </div>
   );
