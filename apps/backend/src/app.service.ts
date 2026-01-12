@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
+import { NotificationSettingsService } from './modules/notification-settings/notification-settings.service';
 
 @Injectable()
 export class AppService {
   private readonly startTime = Date.now();
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly notificationSettingsService: NotificationSettingsService,
   ) {}
 
   getHello(): string {
@@ -16,9 +16,16 @@ export class AppService {
   }
 
   async getHealth() {
-    const smtpHost = this.configService.get<string>('SMTP_HOST');
-    const smtpUser = this.configService.get<string>('SMTP_USER');
-    const telegramToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    // Get settings from database (which has the actual configured values)
+    const { email: emailSettings, telegram: telegramSettings } =
+      await this.notificationSettingsService.getAllSettings();
+
+    // Check if email is configured (has host and user)
+    const emailConfigured = !!(emailSettings?.smtpHost && emailSettings?.smtpUser);
+    const emailProvider = emailSettings?.smtpHost ? emailSettings.smtpHost : null;
+
+    // Check if telegram is configured (has bot token)
+    const telegramConfigured = !!telegramSettings?.telegramBotToken;
 
     return {
       version: '2.0.0',
@@ -28,11 +35,11 @@ export class AppService {
         type: 'PostgreSQL',
       },
       email: {
-        configured: !!(smtpHost && smtpUser),
-        provider: smtpHost ? `SMTP (${smtpHost})` : null,
+        configured: emailConfigured,
+        provider: emailProvider ? `SMTP (${emailProvider})` : null,
       },
       telegram: {
-        configured: !!telegramToken,
+        configured: telegramConfigured,
       },
       metrics: {
         refreshInterval: 3,
