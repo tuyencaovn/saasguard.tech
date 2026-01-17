@@ -1,7 +1,7 @@
 # Codebase Summary - BimNext Monitor
 
 **Generated:** 2025-12-24
-**Last Updated:** 2025-12-24
+**Last Updated:** 2026-01-17
 **Total Files:** 112
 **Total Tokens:** 77,274
 
@@ -20,6 +20,7 @@ bimnext_monitor/
 ├── apps/
 │   ├── backend/                 # NestJS API (Node.js/TypeScript)
 │   │   ├── src/
+│   │   │   ├── config/          # App configuration (brand, etc.)
 │   │   │   ├── database/        # Database seeding
 │   │   │   ├── gateways/        # WebSocket gateways
 │   │   │   ├── modules/         # Feature modules
@@ -38,6 +39,7 @@ bimnext_monitor/
 │   │
 │   └── frontend/                # Next.js Dashboard (React/TypeScript)
 │       ├── src/
+│       │   ├── config/          # App configuration (brand)
 │       │   ├── app/             # Route pages
 │       │   │   ├── page.tsx           # Dashboard
 │       │   │   ├── alerts/page.tsx    # Alert management UI
@@ -325,6 +327,8 @@ npm run db:down         # Stop PostgreSQL
 Backend (`.env`):
 ```
 PORT=3005
+APP_NAME=BimNext Monitor           # Configurable brand name
+APP_SHORT_NAME=BimNext             # Short brand name
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
 DATABASE_USER=monitor
@@ -338,6 +342,8 @@ FRONTEND_URL=http://localhost:3006
 
 Frontend (`.env`):
 ```
+NEXT_PUBLIC_APP_NAME=BimNext Monitor       # Configurable brand name
+NEXT_PUBLIC_APP_SHORT_NAME=BimNext         # Short brand name
 NEXT_PUBLIC_API_URL=http://localhost:3005
 NEXT_PUBLIC_WS_URL=http://localhost:3005
 ```
@@ -381,6 +387,12 @@ NEXT_PUBLIC_WS_URL=http://localhost:3005
 - Role-based access (Admin/Viewer)
 - User invitation system
 - Password reset via email
+
+### Branding
+- Configurable app name via environment variables
+- `APP_NAME` / `NEXT_PUBLIC_APP_NAME` for full name
+- `APP_SHORT_NAME` / `NEXT_PUBLIC_APP_SHORT_NAME` for sidebar
+- Used in: emails, notifications, page titles, sidebar, auth pages
 
 ---
 

@@ -54,6 +54,10 @@ Hoặc nếu có PostgreSQL sẵn, skip bước này và cấu hình connection 
 PORT=3005
 NODE_ENV=production
 
+# Branding (optional - customize app name)
+APP_NAME=BimNext Monitor
+APP_SHORT_NAME=BimNext
+
 # Database
 DATABASE_HOST=localhost
 DATABASE_PORT=5435
@@ -85,6 +89,12 @@ ADMIN_EMAIL=admin@yourdomain.com
 **Frontend** (`apps/frontend/.env`):
 ```env
 PORT=3006
+
+# Branding (optional - customize app name)
+NEXT_PUBLIC_APP_NAME=BimNext Monitor
+NEXT_PUBLIC_APP_SHORT_NAME=BimNext
+
+# API URLs
 NEXT_PUBLIC_API_URL=https://api.monitor.yourdomain.com
 NEXT_PUBLIC_WS_URL=https://api.monitor.yourdomain.com
 ```
@@ -240,6 +250,8 @@ npm install --legacy-peer-deps
 |----------|----------|---------|-------------|
 | `PORT` | No | 3005 | Backend port |
 | `NODE_ENV` | No | development | Environment |
+| `APP_NAME` | No | BimNext Monitor | Full app name (emails, UI) |
+| `APP_SHORT_NAME` | No | BimNext | Short brand name (sidebar, logo) |
 | `DATABASE_HOST` | Yes | - | PostgreSQL host |
 | `DATABASE_PORT` | Yes | - | PostgreSQL port |
 | `DATABASE_USER` | Yes | - | PostgreSQL user |
@@ -252,8 +264,10 @@ npm install --legacy-peer-deps
 
 ### Frontend (.env)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | Frontend port (default: 3006) |
-| `NEXT_PUBLIC_API_URL` | Yes | Backend API URL |
-| `NEXT_PUBLIC_WS_URL` | Yes | WebSocket URL (same as API) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | 3006 | Frontend port |
+| `NEXT_PUBLIC_APP_NAME` | No | BimNext Monitor | Full app name (title, UI) |
+| `NEXT_PUBLIC_APP_SHORT_NAME` | No | BimNext | Short brand name (sidebar) |
+| `NEXT_PUBLIC_API_URL` | Yes | - | Backend API URL |
+| `NEXT_PUBLIC_WS_URL` | Yes | - | WebSocket URL (same as API) |
