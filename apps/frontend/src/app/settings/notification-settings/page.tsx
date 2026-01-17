@@ -18,6 +18,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/config/brand';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -63,7 +64,7 @@ export default function NotificationSettingsPage() {
     smtpPort: 587,
     smtpUser: '',
     smtpPass: '',
-    smtpFromName: 'BimNext Monitor',
+    smtpFromName: APP_NAME,
     smtpFromEmail: '',
   });
 
@@ -102,7 +103,7 @@ export default function NotificationSettingsPage() {
             smtpPort: data.email.smtpPort || 587,
             smtpUser: data.email.smtpUser || '',
             smtpPass: '', // Don't show masked password
-            smtpFromName: data.email.smtpFromName || 'BimNext Monitor',
+            smtpFromName: data.email.smtpFromName || APP_NAME,
             smtpFromEmail: data.email.smtpFromEmail || '',
           });
         }
@@ -397,7 +398,7 @@ export default function NotificationSettingsPage() {
                       type="text"
                       value={emailSettings.smtpFromName}
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpFromName: e.target.value }))}
-                      placeholder="BimNext Monitor"
+                      placeholder={APP_NAME}
                       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
                     />
                   </div>

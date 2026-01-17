@@ -2,20 +2,25 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { NotificationSettingsService } from '../notification-settings/notification-settings.service';
+import { DEFAULT_APP_NAME, getBrandConfig } from '../../config/brand.config';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter | null = null;
-  private fromName: string = 'BimNext Monitor';
+  private fromName: string = DEFAULT_APP_NAME;
   private fromEmail: string | null = null;
   private enabled = false;
+  private appName: string;
 
   constructor(
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => NotificationSettingsService))
     private readonly settingsService: NotificationSettingsService,
   ) {
+    const brand = getBrandConfig(this.configService);
+    this.appName = brand.appName;
+    this.fromName = brand.appName;
     // Initial setup from .env (will be overwritten by DB settings)
     this.initFromEnv();
     // Load from DB after a short delay to ensure DB is ready
@@ -34,7 +39,7 @@ export class EmailService {
     }
 
     this.createTransporter(host, port, user, pass);
-    this.fromName = this.configService.get<string>('SMTP_FROM_NAME', 'BimNext Monitor');
+    this.fromName = this.configService.get<string>('SMTP_FROM_NAME', this.appName);
     this.fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL') || user;
     this.enabled = true;
     this.logger.log(`SMTP configured from .env: ${host}:${port}`);
@@ -50,7 +55,7 @@ export class EmailService {
           settings.smtpUser,
           settings.smtpPass,
         );
-        this.fromName = settings.smtpFromName || 'BimNext Monitor';
+        this.fromName = settings.smtpFromName || this.appName;
         this.fromEmail = settings.smtpFromEmail || settings.smtpUser;
         this.enabled = settings.enabled;
         this.logger.log(`SMTP configured from DB: ${settings.smtpHost}:${settings.smtpPort}`);
@@ -91,7 +96,7 @@ export class EmailService {
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">Reset Your Password</h2>
-            <p>You requested to reset your password for BimNext Server Monitor.</p>
+            <p>You requested to reset your password for ${this.appName}.</p>
             <p>Click the button below to set a new password. This link expires in 15 minutes.</p>
             <div style="margin: 30px 0;">
               <a href="${resetUrl}"
@@ -158,11 +163,11 @@ export class EmailService {
       await this.transporter.sendMail({
         from: `"${this.fromName}" <${this.fromEmail}>`,
         to,
-        subject: '🧪 Test Email - BimNext Server Monitor',
+        subject: `🧪 Test Email - ${this.appName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #22c55e;">✅ Email Configuration Working!</h2>
-            <p>This is a test email from BimNext Server Monitor.</p>
+            <p>This is a test email from ${this.appName}.</p>
             <p>Your SMTP configuration is correct and emails can be sent successfully.</p>
             <p style="color: #666; font-size: 12px; margin-top: 30px;">
               Sent at: ${new Date().toLocaleString()}

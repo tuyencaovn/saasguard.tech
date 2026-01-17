@@ -1,5 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NotificationSettingsService } from '../notification-settings/notification-settings.service';
+import { getBrandConfig } from '../../config/brand.config';
 
 @Injectable()
 export class TelegramService {
@@ -7,11 +9,15 @@ export class TelegramService {
   private botToken: string | null = null;
   private chatId: string | null = null;
   private enabled = false;
+  private appName: string;
 
   constructor(
     @Inject(forwardRef(() => NotificationSettingsService))
     private readonly settingsService: NotificationSettingsService,
+    private readonly configService: ConfigService,
   ) {
+    const brand = getBrandConfig(this.configService);
+    this.appName = brand.appName;
     // Will be initialized after module init
     this.initFromSettings();
   }
@@ -96,7 +102,7 @@ export class TelegramService {
       return false;
     }
 
-    const testMessage = `🧪 <b>Test Message</b>\n\nYour Telegram notification is configured correctly!\n\nSent from BimNext Server Monitor at ${new Date().toLocaleString()}`;
+    const testMessage = `🧪 <b>Test Message</b>\n\nYour Telegram notification is configured correctly!\n\nSent from ${this.appName} at ${new Date().toLocaleString()}`;
 
     try {
       const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;

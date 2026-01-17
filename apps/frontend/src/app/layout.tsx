@@ -4,6 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/contexts/auth-context';
 import { LayoutWrapper } from '@/components/layout-wrapper';
+import { APP_NAME } from '@/config/brand';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -18,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'BimNext Server Monitor',
+  title: APP_NAME,
   description: 'Real-time server monitoring dashboard',
 };
 

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
+import { APP_SHORT_NAME } from '@/config/brand';
 import {
   LayoutDashboard,
   Box,
@@ -152,7 +153,7 @@ export function Sidebar() {
           <Server className="w-5 h-5 text-white" />
         </div>
         <div>
-          <span className="font-semibold text-white">BimNext</span>
+          <span className="font-semibold text-white">{APP_SHORT_NAME}</span>
           <span className="text-xs text-white/40 block">Server Monitor</span>
         </div>
       </div>

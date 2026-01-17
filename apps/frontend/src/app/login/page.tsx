@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import { APP_SHORT_NAME } from '@/config/brand';
 import {
   Server,
   Loader2,
@@ -241,7 +242,7 @@ export default function LoginPage() {
               <Server className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold">BimNext</span>
+              <span className="text-xl font-bold">{APP_SHORT_NAME}</span>
               <span className="text-xs text-white/40 block">Server Monitor</span>
             </div>
           </div>
@@ -315,7 +316,7 @@ export default function LoginPage() {
                 <Server className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="text-2xl font-bold">BimNext</span>
+                <span className="text-2xl font-bold">{APP_SHORT_NAME}</span>
                 <span className="text-xs text-white/40 block">
                   Server Monitor
                 </span>

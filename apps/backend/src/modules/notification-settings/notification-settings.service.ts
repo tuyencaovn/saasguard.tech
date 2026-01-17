@@ -5,16 +5,21 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationSettings, NotificationType } from './entities/notification-settings.entity';
 import { UpdateEmailSettingsDto } from './dto/update-email-settings.dto';
 import { UpdateTelegramSettingsDto } from './dto/update-telegram-settings.dto';
+import { getBrandConfig } from '../../config/brand.config';
 
 @Injectable()
 export class NotificationSettingsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationSettingsService.name);
+  private readonly appName: string;
 
   constructor(
     @InjectRepository(NotificationSettings)
     private readonly repo: Repository<NotificationSettings>,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    const brand = getBrandConfig(this.configService);
+    this.appName = brand.appName;
+  }
 
   /**
    * Initialize default settings from .env on first run
@@ -35,7 +40,7 @@ export class NotificationSettingsService implements OnModuleInit {
         smtpPort: this.configService.get<number>('SMTP_PORT', 587),
         smtpUser: this.configService.get<string>('SMTP_USER') || undefined,
         smtpPass: this.configService.get<string>('SMTP_PASS') || undefined,
-        smtpFromName: this.configService.get<string>('SMTP_FROM_NAME', 'BimNext Monitor'),
+        smtpFromName: this.configService.get<string>('SMTP_FROM_NAME', this.appName),
         smtpFromEmail: this.configService.get<string>('SMTP_FROM_EMAIL') || undefined,
       });
       await this.repo.save(emailSettings);

@@ -6,6 +6,7 @@ import { TelegramService } from '../telegram/telegram.service';
 import { AlertThreshold, MetricName, NotificationChannel, Operator } from './entities/alert-threshold.entity';
 import { DeliveryStatus } from './entities/alert-log.entity';
 import { ConfigService } from '@nestjs/config';
+import { getBrandConfig } from '../../config/brand.config';
 
 interface SystemMetrics {
   cpu: { usage: number };
@@ -16,13 +17,17 @@ interface SystemMetrics {
 @Injectable()
 export class AlertsScheduler {
   private readonly logger = new Logger(AlertsScheduler.name);
+  private readonly appName: string;
 
   constructor(
     private readonly alertsService: AlertsService,
     private readonly emailService: EmailService,
     private readonly telegramService: TelegramService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    const brand = getBrandConfig(this.configService);
+    this.appName = brand.appName;
+  }
 
   /**
    * Listen for metrics updates and check thresholds
@@ -191,7 +196,7 @@ export class AlertsScheduler {
         </p>
 
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
-          — BimNext Server Monitor
+          — ${this.appName}
         </p>
       </div>
     `;

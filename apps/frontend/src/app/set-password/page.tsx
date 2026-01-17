@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Server, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { APP_NAME } from '@/config/brand';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -97,7 +98,7 @@ export default function SetPasswordPage() {
             <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
               <Server className="h-8 w-8 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">BimNext Monitor</span>
+            <span className="text-2xl font-bold text-white">{APP_NAME}</span>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-8">
@@ -122,7 +123,7 @@ export default function SetPasswordPage() {
           <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg">
             <Server className="h-8 w-8 text-white" />
           </div>
-          <span className="text-2xl font-bold text-white">BimNext Monitor</span>
+          <span className="text-2xl font-bold text-white">{APP_NAME}</span>
         </div>
 
         {/* Set Password Card */}

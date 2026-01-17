@@ -1,18 +1,25 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { NotificationSettingsService } from './modules/notification-settings/notification-settings.service';
+import { getBrandConfig } from './config/brand.config';
 
 @Injectable()
 export class AppService {
   private readonly startTime = Date.now();
+  private readonly appName: string;
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationSettingsService: NotificationSettingsService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    const brand = getBrandConfig(this.configService);
+    this.appName = brand.appName;
+  }
 
   getHello(): string {
-    return 'BimNext Server Monitor API';
+    return `${this.appName} API`;
   }
 
   async getHealth() {

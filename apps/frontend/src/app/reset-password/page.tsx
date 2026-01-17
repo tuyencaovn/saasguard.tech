@@ -21,6 +21,8 @@ import {
   Shield,
 } from 'lucide-react';
 
+import { APP_SHORT_NAME } from '@/config/brand';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
 // Docker icon SVG
@@ -513,7 +515,7 @@ export default function ResetPasswordPage() {
               <Server className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold">BimNext</span>
+              <span className="text-xl font-bold">{APP_SHORT_NAME}</span>
               <span className="text-xs text-white/40 block">Server Monitor</span>
             </div>
           </div>
@@ -587,7 +589,7 @@ export default function ResetPasswordPage() {
                 <Server className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="text-2xl font-bold">BimNext</span>
+                <span className="text-2xl font-bold">{APP_SHORT_NAME}</span>
                 <span className="text-xs text-white/40 block">
                   Server Monitor
                 </span>
