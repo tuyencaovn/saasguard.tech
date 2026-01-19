@@ -1,0 +1,53 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0b"/>
+
+  <!-- Server rack body -->
+  <rect x="96" y="80" width="320" height="352" rx="24" fill="#18181b" stroke="#27272a" stroke-width="4"/>
+
+  <!-- Server unit 1 -->
+  <rect x="120" y="104" width="272" height="72" rx="12" fill="#111113" stroke="#27272a" stroke-width="2"/>
+  <!-- Status light -->
+  <circle cx="156" cy="140" r="10" fill="#22c55e"/>
+  <!-- Activity bars -->
+  <rect x="184" y="124" width="48" height="8" rx="4" fill="#3b82f6"/>
+  <rect x="184" y="140" width="36" height="8" rx="4" fill="#3b82f6" opacity="0.6"/>
+  <rect x="184" y="156" width="24" height="8" rx="4" fill="#3b82f6" opacity="0.3"/>
+  <!-- Vent holes -->
+  <rect x="320" y="124" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="134" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="144" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="154" width="48" height="4" rx="2" fill="#27272a"/>
+
+  <!-- Server unit 2 -->
+  <rect x="120" y="192" width="272" height="72" rx="12" fill="#111113" stroke="#27272a" stroke-width="2"/>
+  <!-- Status light -->
+  <circle cx="156" cy="228" r="10" fill="#22c55e"/>
+  <!-- Activity bars -->
+  <rect x="184" y="212" width="56" height="8" rx="4" fill="#3b82f6"/>
+  <rect x="184" y="228" width="44" height="8" rx="4" fill="#3b82f6" opacity="0.6"/>
+  <rect x="184" y="244" width="32" height="8" rx="4" fill="#3b82f6" opacity="0.3"/>
+  <!-- Vent holes -->
+  <rect x="320" y="212" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="222" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="232" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="242" width="48" height="4" rx="2" fill="#27272a"/>
+
+  <!-- Server unit 3 -->
+  <rect x="120" y="280" width="272" height="72" rx="12" fill="#111113" stroke="#27272a" stroke-width="2"/>
+  <!-- Status light -->
+  <circle cx="156" cy="316" r="10" fill="#22c55e"/>
+  <!-- Activity bars -->
+  <rect x="184" y="300" width="40" height="8" rx="4" fill="#3b82f6"/>
+  <rect x="184" y="316" width="28" height="8" rx="4" fill="#3b82f6" opacity="0.6"/>
+  <rect x="184" y="332" width="16" height="8" rx="4" fill="#3b82f6" opacity="0.3"/>
+  <!-- Vent holes -->
+  <rect x="320" y="300" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="310" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="320" width="48" height="4" rx="2" fill="#27272a"/>
+  <rect x="320" y="330" width="48" height="4" rx="2" fill="#27272a"/>
+
+  <!-- Activity pulse line at bottom -->
+  <path d="M120 392 L180 392 L200 372 L220 412 L240 382 L260 402 L280 392 L392 392"
+        stroke="#3b82f6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
