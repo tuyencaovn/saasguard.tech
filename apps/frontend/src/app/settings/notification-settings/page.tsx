@@ -241,7 +241,7 @@ export default function NotificationSettingsPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -268,7 +268,7 @@ export default function NotificationSettingsPage() {
         </div>
       </header>
 
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto">
         {/* Message */}
         {message && (
           <div className={cn(

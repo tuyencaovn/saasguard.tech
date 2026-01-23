@@ -196,7 +196,7 @@ export default function AlertsPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Alerts</h1>
@@ -218,7 +218,7 @@ export default function AlertsPage() {
       </header>
 
       {/* Content */}
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {/* Tabs */}
         <div className="flex items-center gap-2 mb-8">
           <button

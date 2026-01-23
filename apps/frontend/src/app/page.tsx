@@ -179,7 +179,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Dashboard Content */}
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {!metrics ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-white/40">Loading metrics...</div>

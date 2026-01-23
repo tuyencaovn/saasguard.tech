@@ -140,7 +140,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Settings</h1>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {/* Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 

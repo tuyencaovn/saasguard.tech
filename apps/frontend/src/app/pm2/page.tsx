@@ -273,7 +273,7 @@ export default function PM2Page() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-8 py-4">
+      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">PM2 Processes</h1>
@@ -293,7 +293,7 @@ export default function PM2Page() {
       </header>
 
       {/* Content */}
-      <div className="p-8 space-y-6">
+      <div className="p-4 md:p-8 space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="glass-card rounded-2xl p-6">
