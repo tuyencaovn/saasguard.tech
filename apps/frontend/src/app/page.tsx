@@ -177,22 +177,22 @@ export default function DashboardPage() {
   const runningContainers = containers.filter((c) => c.state === 'running').length;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-sm text-white/40">Real-time server monitoring</p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <ConnectionStatus />
 
             <select
               value={timeRange}
               onChange={handleTimeRangeChange}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer"
+              className="px-2 md:px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer max-w-[140px] md:max-w-none"
             >
               {Object.entries(TIME_RANGE_CONFIG).map(([key, { label }]) => (
                 <option key={key} value={key}>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all disabled:opacity-50"
+              className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all disabled:opacity-50 shrink-0"
             >
               <RefreshCw className={cn('w-5 h-5', isRefreshing && 'animate-spin')} />
             </button>

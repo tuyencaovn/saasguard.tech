@@ -47,7 +47,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
             </div>
           </>
         )}
-        <main className={showSidebar ? 'flex-1 md:ml-64' : 'flex-1'}>
+        <main className={showSidebar ? 'flex-1 md:ml-64 overflow-x-hidden' : 'flex-1'}>
           {children}
         </main>
       </div>
