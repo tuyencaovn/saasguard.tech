@@ -7,6 +7,10 @@ import { MetricsService } from './metrics.service';
 export class MetricsScheduler {
   private readonly logger = new Logger(MetricsScheduler.name);
   private collectCount = 0;
+  // Track peak values between saves to capture brief spikes
+  private peakCpu = 0;
+  private peakRam = 0;
+  private peakDisk = 0;
 
   constructor(
     private readonly metricsService: MetricsService,
@@ -21,13 +25,31 @@ export class MetricsScheduler {
     try {
       const metrics = await this.metricsService.collectMetrics();
 
-      // Emit event for WebSocket broadcast
+      // Track peak values between history saves
+      this.peakCpu = Math.max(this.peakCpu, metrics.cpu.usage);
+      this.peakRam = Math.max(this.peakRam, metrics.ram.usagePercent);
+      this.peakDisk = Math.max(this.peakDisk, metrics.disk[0]?.usagePercent ?? 0);
+
+      // Emit event for WebSocket broadcast (always send current values for real-time display)
       this.eventEmitter.emit('metrics.updated', metrics);
 
-      // Save to history every 20th collection (~1 minute)
+      // Save to history every 20th collection (~1 minute), using peak values
       this.collectCount++;
       if (this.collectCount >= 20) {
-        await this.metricsService.saveToHistory(metrics);
+        // Save with peak values to capture any spikes in the interval
+        const peakMetrics = {
+          ...metrics,
+          cpu: { ...metrics.cpu, usage: this.peakCpu },
+          ram: { ...metrics.ram, usagePercent: this.peakRam },
+          disk: metrics.disk.length > 0
+            ? [{ ...metrics.disk[0], usagePercent: this.peakDisk }, ...metrics.disk.slice(1)]
+            : metrics.disk,
+        };
+        await this.metricsService.saveToHistory(peakMetrics);
+        // Reset peaks
+        this.peakCpu = metrics.cpu.usage;
+        this.peakRam = metrics.ram.usagePercent;
+        this.peakDisk = metrics.disk[0]?.usagePercent ?? 0;
         this.collectCount = 0;
       }
     } catch (error) {

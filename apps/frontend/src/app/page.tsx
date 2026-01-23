@@ -85,6 +85,9 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastTimestampRef = useRef<string | null>(null);
   const historyLoadedRef = useRef<TimeRange | null>(null);
+  // Track peak values between chart sample intervals to capture brief spikes
+  const peakMetricsRef = useRef<{ cpu: number; ram: number; disk: number }>({ cpu: 0, ram: 0, disk: 0 });
+  const peakNetworkRef = useRef<{ rx: number; tx: number }>({ rx: 0, tx: 0 });
 
   // Load history from API on mount and when time range changes
   useEffect(() => {
@@ -99,33 +102,52 @@ export default function DashboardPage() {
     });
   }, [timeRange]);
 
-  // Add new metrics to history (from WebSocket)
+  // Add new metrics to history (from WebSocket), tracking peak values between samples
   useEffect(() => {
     if (metrics && metrics.timestamp !== lastTimestampRef.current) {
       lastTimestampRef.current = metrics.timestamp;
       const now = Date.now();
       const config = TIME_RANGE_CONFIG[timeRange];
 
+      const currentCpu = metrics.cpu.usage;
+      const currentRam = metrics.ram.usagePercent;
+      const currentDisk = metrics.disk[0]?.usagePercent ?? 0;
+      const currentRx = metrics.network?.rx ?? 0;
+      const currentTx = metrics.network?.tx ?? 0;
+
+      // Update peak values (track max between sample intervals)
+      peakMetricsRef.current = {
+        cpu: Math.max(peakMetricsRef.current.cpu, currentCpu),
+        ram: Math.max(peakMetricsRef.current.ram, currentRam),
+        disk: Math.max(peakMetricsRef.current.disk, currentDisk),
+      };
+      peakNetworkRef.current = {
+        rx: Math.max(peakNetworkRef.current.rx, currentRx),
+        tx: Math.max(peakNetworkRef.current.tx, currentTx),
+      };
+
       setMetricsHistory((prev) => {
-        // Check if enough time has passed since last data point
         const lastPoint = prev[prev.length - 1];
         if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
           return prev;
         }
 
+        // Use peak values for the data point to capture brief spikes
         const dataPoint: MetricsDataPoint = {
           timestamp: now,
-          cpu: metrics.cpu.usage,
-          ram: metrics.ram.usagePercent,
-          disk: metrics.disk[0]?.usagePercent ?? 0,
+          cpu: peakMetricsRef.current.cpu,
+          ram: peakMetricsRef.current.ram,
+          disk: peakMetricsRef.current.disk,
         };
+
+        // Reset peaks after sampling
+        peakMetricsRef.current = { cpu: currentCpu, ram: currentRam, disk: currentDisk };
 
         const cutoffTime = now - config.minutes * 60 * 1000;
         const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
         return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
       });
 
-      // Also update network history
       setNetworkHistory((prev) => {
         const lastPoint = prev[prev.length - 1];
         if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
@@ -134,16 +156,18 @@ export default function DashboardPage() {
 
         const dataPoint: NetworkDataPoint = {
           timestamp: now,
-          rx: metrics.network?.rx ?? 0,
-          tx: metrics.network?.tx ?? 0,
+          rx: peakNetworkRef.current.rx,
+          tx: peakNetworkRef.current.tx,
         };
+
+        // Reset peaks after sampling
+        peakNetworkRef.current = { rx: currentRx, tx: currentTx };
 
         const cutoffTime = now - config.minutes * 60 * 1000;
         const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
         return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
       });
 
-      // Also update link speed history
       setLinkSpeedHistory((prev) => {
         const lastPoint = prev[prev.length - 1];
         if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
