@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { AlertsService } from './alerts.service';
 import { EmailService } from '../email/email.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { AlertThreshold, MetricName, NotificationChannel, Operator } from './entities/alert-threshold.entity';
 import { DeliveryStatus } from './entities/alert-log.entity';
 import { ConfigService } from '@nestjs/config';
@@ -23,6 +24,7 @@ export class AlertsScheduler {
     private readonly alertsService: AlertsService,
     private readonly emailService: EmailService,
     private readonly telegramService: TelegramService,
+    private readonly metricsService: MetricsService,
     private readonly configService: ConfigService,
   ) {
     const brand = getBrandConfig(this.configService);
@@ -49,6 +51,12 @@ export class AlertsScheduler {
           if (!canSend) {
             this.logger.log(`Skipping alert (cooldown active) for threshold ${threshold.id}`);
             continue;
+          }
+
+          // Save current metrics to history so chart reflects the alert spike
+          const fullMetrics = this.metricsService.getCachedMetrics();
+          if (fullMetrics) {
+            await this.metricsService.saveToHistory(fullMetrics).catch(() => {});
           }
 
           // Send notifications to all channels
