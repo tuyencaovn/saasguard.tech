@@ -44,7 +44,11 @@ const navigation: NavItem[] = [
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -146,7 +150,7 @@ export function Sidebar() {
     : 'U';
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 sidebar-glass flex flex-col z-20">
+    <aside className="h-full w-full sidebar-glass flex flex-col">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-6">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -169,6 +173,7 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
                     isActive
@@ -197,6 +202,7 @@ export function Sidebar() {
           <div className="mt-8 pt-6 border-t border-white/5">
             <Link
               href="/settings"
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
                 pathname === '/settings'
