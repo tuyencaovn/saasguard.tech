@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
+import { DiskWarningBanner } from '@/components/disk-warning-banner';
 import { PerformanceChart } from '@/components/performance-chart';
 import { NetworkChart } from '@/components/network-chart';
 import { LinkSpeedChart } from '@/components/link-speed-chart';
@@ -244,6 +245,9 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
+            {/* Disk Warning Banner */}
+            <DiskWarningBanner diskPercent={metrics.disk[0]?.usagePercent ?? 0} />
+
             {/* Metric Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
               <MetricGauge

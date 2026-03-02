@@ -1,16 +1,19 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AlertsService } from '../alerts/alerts.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => AlertsService))
+    private readonly alertsService: AlertsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -26,7 +29,10 @@ export class UsersService {
       ...createUserDto,
       password: hashedPassword,
     });
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    // Create default disk thresholds for the new user (fire-and-forget)
+    this.alertsService.createDefaultThresholds(saved.id).catch(() => {});
+    return saved;
   }
 
   async findAll(): Promise<User[]> {

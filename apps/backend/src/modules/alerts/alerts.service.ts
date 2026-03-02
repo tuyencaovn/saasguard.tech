@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
-import { AlertThreshold } from './entities/alert-threshold.entity';
+import { AlertThreshold, MetricName, Operator, NotificationChannel } from './entities/alert-threshold.entity';
 import { AlertLog, DeliveryStatus } from './entities/alert-log.entity';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { UpdateThresholdDto } from './dto/update-threshold.dto';
@@ -153,6 +153,36 @@ export class AlertsService {
 
     // Can send if last log is older than cooldown period
     return lastLog.triggeredAt < cooldownTime;
+  }
+
+  // Create default disk thresholds for new users (idempotent)
+  async createDefaultThresholds(userId: string): Promise<void> {
+    const existing = await this.thresholdRepository.find({
+      where: { userId, metricName: MetricName.DISK },
+    });
+    if (existing.length > 0) return;
+
+    const defaults = [
+      {
+        metricName: MetricName.DISK,
+        operator: Operator.GTE,
+        value: 80,
+        channels: [NotificationChannel.EMAIL],
+        cooldownMs: 3600000, // 1h
+      },
+      {
+        metricName: MetricName.DISK,
+        operator: Operator.GTE,
+        value: 90,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.TELEGRAM],
+        cooldownMs: 1800000, // 30min
+      },
+    ];
+
+    for (const def of defaults) {
+      const threshold = this.thresholdRepository.create({ ...def, userId });
+      await this.thresholdRepository.save(threshold);
+    }
   }
 
   // Cleanup old logs (retention: 90 days)

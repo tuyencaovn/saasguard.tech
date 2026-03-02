@@ -291,10 +291,34 @@ export class AlertsScheduler {
     }
   }
 
+  private getDiskAlertMessage(currentValue: number): { subject: string; body: string; telegramText: string } {
+    const isCritical = currentValue >= 90;
+    if (isCritical) {
+      return {
+        subject: `Your server disk is ${currentValue.toFixed(0)}% full — action needed now`,
+        body: `Your server disk is <strong>${currentValue.toFixed(0)}% full</strong>. Your database may stop writing soon. Please free up space or expand storage immediately.`,
+        telegramText: `Your server disk is <b>${currentValue.toFixed(0)}% full</b>. Your database may stop writing soon. Action needed now.`,
+      };
+    }
+    return {
+      subject: `Heads up — your server disk is ${currentValue.toFixed(0)}% full`,
+      body: `Your server disk is <strong>${currentValue.toFixed(0)}% full</strong>. Consider cleaning up old logs or expanding storage before you hit the critical threshold.`,
+      telegramText: `Heads up — your server disk is <b>${currentValue.toFixed(0)}% full</b>. Consider cleaning up old logs or expanding storage.`,
+    };
+  }
+
   private async sendEmailAlert(threshold: AlertThreshold, currentValue: number, to: string, logId: string) {
     try {
-      const subject = `⚠️ Alert: ${threshold.metricName.toUpperCase()} ${threshold.operator} ${threshold.value}%`;
-      const html = this.buildAlertEmailHtml(threshold, currentValue);
+      let subject: string;
+      let html: string;
+      if (threshold.metricName === MetricName.DISK) {
+        const msg = this.getDiskAlertMessage(currentValue);
+        subject = msg.subject;
+        html = this.buildDiskAlertEmailHtml(currentValue, msg.body);
+      } else {
+        subject = `⚠️ Alert: ${threshold.metricName.toUpperCase()} ${threshold.operator} ${threshold.value}%`;
+        html = this.buildAlertEmailHtml(threshold, currentValue);
+      }
 
       const sent = await this.emailService.sendAlertEmail(to, subject, html);
 
@@ -321,12 +345,19 @@ export class AlertsScheduler {
 
   private async sendTelegramAlert(threshold: AlertThreshold, currentValue: number, logId: string) {
     try {
-      const message = this.telegramService.buildAlertMessage(
-        threshold.metricName,
-        threshold.operator,
-        threshold.value,
-        currentValue,
-      );
+      let message: string;
+      if (threshold.metricName === MetricName.DISK) {
+        const msg = this.getDiskAlertMessage(currentValue);
+        const emoji = currentValue >= 90 ? '🔴' : '🟡';
+        message = `${emoji} <b>Disk Alert</b>\n\n${msg.telegramText}\n\n— ${this.appName}`;
+      } else {
+        message = this.telegramService.buildAlertMessage(
+          threshold.metricName,
+          threshold.operator,
+          threshold.value,
+          currentValue,
+        );
+      }
 
       const sent = await this.telegramService.sendAlertMessage(message);
 
@@ -339,6 +370,38 @@ export class AlertsScheduler {
     } catch (error) {
       this.logger.error('Failed to send Telegram alert', error);
     }
+  }
+
+  private buildDiskAlertEmailHtml(currentValue: number, bodyMessage: string): string {
+    const isCritical = currentValue >= 90;
+    const color = isCritical ? '#ef4444' : '#f59e0b';
+    const bgColor = isCritical ? '#fef2f2' : '#fffbeb';
+    const borderColor = isCritical ? '#fecaca' : '#fde68a';
+    const emoji = isCritical ? '🔴' : '🟡';
+    const label = isCritical ? 'Critical: Disk Almost Full' : 'Warning: Disk Space Low';
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: ${color};">${emoji} ${label}</h2>
+        <p>${bodyMessage}</p>
+
+        <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Disk Usage:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: ${color};">${currentValue.toFixed(1)}%</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Time:</td>
+              <td style="padding: 8px 0;">${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          — ${this.appName}
+        </p>
+      </div>
+    `;
   }
 
   private buildAlertEmailHtml(threshold: AlertThreshold, currentValue: number): string {
