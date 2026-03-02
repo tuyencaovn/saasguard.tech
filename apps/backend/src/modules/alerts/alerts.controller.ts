@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
+import { CrashDetectionService } from './crash-detection.service';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { UpdateThresholdDto } from './dto/update-threshold.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -18,7 +19,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('alerts')
 export class AlertsController {
-  constructor(private readonly alertsService: AlertsService) {}
+  constructor(
+    private readonly alertsService: AlertsService,
+    private readonly crashDetectionService: CrashDetectionService,
+  ) {}
 
   // Thresholds
   @Post('thresholds')
@@ -50,6 +54,12 @@ export class AlertsController {
   @Roles(UserRole.ADMIN)
   removeThreshold(@Param('id', ParseUUIDPipe) id: string) {
     return this.alertsService.removeThreshold(id);
+  }
+
+  // Crash status
+  @Get('crash-status')
+  getCrashStatus() {
+    return this.crashDetectionService.getCrashStatus();
   }
 
   // Logs

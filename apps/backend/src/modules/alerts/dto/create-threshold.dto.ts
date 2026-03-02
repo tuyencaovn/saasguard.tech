@@ -33,4 +33,10 @@ export class CreateThresholdDto {
   @IsNumber()
   @Min(60000) // Minimum 1 minute cooldown
   cooldownMs?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(60)
+  windowMinutes?: number;
 }

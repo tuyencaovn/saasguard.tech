@@ -37,4 +37,10 @@ export class UpdateThresholdDto {
   @IsNumber()
   @Min(60000)
   cooldownMs?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(60)
+  windowMinutes?: number;
 }

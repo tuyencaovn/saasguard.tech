@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, AlertTriangle, Cpu, Server, HardDrive, Mail } from 'lucide-react';
+import { X, AlertTriangle, Cpu, Server, HardDrive, Mail, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ThresholdModalProps {
@@ -12,18 +12,20 @@ interface ThresholdModalProps {
 }
 
 export interface ThresholdFormData {
-  metricName: 'cpu' | 'ram' | 'disk';
+  metricName: 'cpu' | 'ram' | 'disk' | 'crash_loop';
   operator: '>' | '<' | '=' | '!=' | '>=' | '<=';
   value: number;
   channels: ('email' | 'telegram')[];
   enabled: boolean;
   cooldownMs: number;
+  windowMinutes?: number;
 }
 
 const metricOptions = [
   { value: 'cpu', label: 'CPU Usage', icon: Cpu, color: 'text-violet-400' },
   { value: 'ram', label: 'RAM Usage', icon: Server, color: 'text-cyan-400' },
   { value: 'disk', label: 'Disk Usage', icon: HardDrive, color: 'text-amber-400' },
+  { value: 'crash_loop', label: 'Crash Loop', icon: RefreshCw, color: 'text-red-400' },
 ];
 
 const operatorOptions = [
@@ -68,6 +70,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
         channels: initialData.channels,
         enabled: initialData.enabled,
         cooldownMs: initialData.cooldownMs,
+        windowMinutes: initialData.windowMinutes,
       });
     } else {
       setFormData(defaultFormData);
@@ -138,7 +141,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
           {/* Metric Selection */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-3">Metric</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {metricOptions.map((option) => {
                 const Icon = option.icon;
                 const isSelected = formData.metricName === option.value;
@@ -163,37 +166,74 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
           </div>
 
           {/* Condition */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Condition</label>
-              <select
-                value={formData.operator}
-                onChange={(e) => setFormData((prev) => ({ ...prev, operator: e.target.value as ThresholdFormData['operator'] }))}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
-              >
-                {operatorOptions.map((op) => (
-                  <option key={op.value} value={op.value} className="bg-[#1a1a2e]">
-                    {op.label}
-                  </option>
-                ))}
-              </select>
+          {formData.metricName === 'crash_loop' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">Restart Count</label>
+                <input
+                  type="number"
+                  min="2"
+                  max="50"
+                  step="1"
+                  value={formData.value || 3}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, value: val === '' ? 3 : parseInt(val), operator: '>=' as ThresholdFormData['operator'] }));
+                  }}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
+                />
+                <p className="text-xs text-white/40 mt-1">Alert when restarts reach this count</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">Time Window (min)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  step="1"
+                  value={formData.windowMinutes || 10}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, windowMinutes: val === '' ? 10 : parseInt(val) }));
+                  }}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
+                />
+                <p className="text-xs text-white/40 mt-1">Detection window in minutes</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Value (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={formData.value || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFormData((prev) => ({ ...prev, value: val === '' ? 0 : parseFloat(val) }));
-                }}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">Condition</label>
+                <select
+                  value={formData.operator}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, operator: e.target.value as ThresholdFormData['operator'] }))}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
+                >
+                  {operatorOptions.map((op) => (
+                    <option key={op.value} value={op.value} className="bg-[#1a1a2e]">
+                      {op.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">Value (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.value || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, value: val === '' ? 0 : parseFloat(val) }));
+                  }}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Notification Channels */}
           <div>

@@ -13,6 +13,7 @@ export enum MetricName {
   CPU = 'cpu',
   RAM = 'ram',
   DISK = 'disk',
+  CRASH_LOOP = 'crash_loop',
 }
 
 export enum Operator {
@@ -51,6 +52,9 @@ export class AlertThreshold {
 
   @Column({ default: 300000 }) // 5 minutes cooldown
   cooldownMs: number;
+
+  @Column({ default: 10 }) // crash detection window in minutes
+  windowMinutes: number;
 
   @Column({ nullable: true })
   userId: string;

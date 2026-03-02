@@ -8,6 +8,7 @@ import { AlertThreshold, MetricName, NotificationChannel, Operator } from './ent
 import { DeliveryStatus } from './entities/alert-log.entity';
 import { ConfigService } from '@nestjs/config';
 import { getBrandConfig } from '../../config/brand.config';
+import type { CrashDetectedEvent } from './crash-detection.service';
 
 interface SystemMetrics {
   cpu: { usage: number };
@@ -40,6 +41,9 @@ export class AlertsScheduler {
       const thresholds = await this.alertsService.findEnabledThresholds();
 
       for (const threshold of thresholds) {
+        // Crash loop thresholds handled by crash.detected event, not metric polling
+        if (threshold.metricName === MetricName.CRASH_LOOP) continue;
+
         const currentValue = this.getMetricValue(metrics, threshold.metricName);
         const shouldTrigger = this.checkCondition(currentValue, threshold.operator, threshold.value);
 
@@ -68,6 +72,168 @@ export class AlertsScheduler {
     }
   }
 
+  /**
+   * Handle crash loop detection events from CrashDetectionService
+   */
+  @OnEvent('crash.detected')
+  async handleCrashDetected(event: CrashDetectedEvent) {
+    try {
+      // Find CRASH_LOOP thresholds or use defaults
+      const thresholds = await this.alertsService.findEnabledThresholds();
+      const crashThresholds = thresholds.filter(
+        (t) => t.metricName === MetricName.CRASH_LOOP,
+      );
+
+      if (crashThresholds.length === 0) {
+        this.logger.log(`Crash detected for ${event.name} but no CRASH_LOOP thresholds configured`);
+        return;
+      }
+
+      for (const threshold of crashThresholds) {
+        // Check cooldown
+        const canSend = await this.alertsService.canSendAlert(threshold.id);
+        if (!canSend) {
+          this.logger.log(`Skipping crash alert (cooldown active) for ${event.name}`);
+          continue;
+        }
+
+        // Send crash-specific notifications
+        await this.sendCrashNotifications(threshold, event);
+      }
+    } catch (error) {
+      this.logger.error('Failed to handle crash detection', error);
+    }
+  }
+
+  private async sendCrashNotifications(
+    threshold: AlertThreshold,
+    event: CrashDetectedEvent,
+  ) {
+    const email =
+      threshold.user?.email ||
+      this.configService.get<string>('ADMIN_EMAIL') ||
+      'no-email-configured';
+    const log = await this.alertsService.createLog(
+      threshold.id,
+      event.count,
+      email,
+    );
+
+    this.logger.log(
+      `Crash alert: ${event.name} (${event.type}) restarted ${event.count} times in ${event.windowMinutes}min`,
+    );
+
+    for (const channel of threshold.channels) {
+      if (channel === NotificationChannel.EMAIL) {
+        if (email === 'no-email-configured') {
+          await this.alertsService.updateLogStatus(
+            log.id,
+            DeliveryStatus.FAILED,
+            'No email configured',
+          );
+        } else {
+          await this.sendCrashEmailAlert(threshold, event, email, log.id);
+        }
+      } else if (channel === NotificationChannel.TELEGRAM) {
+        await this.sendCrashTelegramAlert(event, log.id);
+      }
+    }
+  }
+
+  private async sendCrashEmailAlert(
+    threshold: AlertThreshold,
+    event: CrashDetectedEvent,
+    to: string,
+    logId: string,
+  ) {
+    try {
+      const subject = `🔄 Crash Loop: ${event.name} restarted ${event.count} times`;
+      const html = this.buildCrashEmailHtml(event);
+      const sent = await this.emailService.sendAlertEmail(to, subject, html);
+
+      await this.alertsService.updateLogStatus(
+        logId,
+        sent ? DeliveryStatus.SENT : DeliveryStatus.FAILED,
+        sent ? undefined : 'Email sending failed',
+      );
+    } catch (error) {
+      await this.alertsService.updateLogStatus(
+        logId,
+        DeliveryStatus.FAILED,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
+  private async sendCrashTelegramAlert(
+    event: CrashDetectedEvent,
+    logId: string,
+  ) {
+    try {
+      const message = [
+        `🔄 *Crash Loop Detected*`,
+        ``,
+        `Your *${event.name}* ${event.type === 'docker' ? 'container' : 'process'} restarted *${event.count} times* in the last *${event.windowMinutes} minutes*.`,
+        ``,
+        `Please check your service immediately.`,
+        `— ${this.appName}`,
+      ].join('\n');
+
+      const sent = await this.telegramService.sendAlertMessage(message);
+      if (sent) {
+        await this.alertsService.updateLogStatus(logId, DeliveryStatus.SENT);
+      } else {
+        await this.alertsService.updateLogStatus(logId, DeliveryStatus.FAILED, 'Telegram not configured');
+      }
+    } catch (error) {
+      await this.alertsService.updateLogStatus(
+        logId,
+        DeliveryStatus.FAILED,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+      this.logger.error('Failed to send crash Telegram alert', error);
+    }
+  }
+
+  private buildCrashEmailHtml(event: CrashDetectedEvent): string {
+    const typeLabel = event.type === 'docker' ? 'Container' : 'PM2 Process';
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ef4444;">🔄 Crash Loop Detected</h2>
+        <p>Your <strong>${event.name}</strong> ${typeLabel.toLowerCase()} is restarting repeatedly.</p>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Service:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${event.name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Type:</td>
+              <td style="padding: 8px 0;">${typeLabel}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Restarts:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #ef4444;">${event.count} times in ${event.windowMinutes} minutes</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Time:</td>
+              <td style="padding: 8px 0;">${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+          Please check your service logs and take action to prevent data loss.
+        </p>
+
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          — ${this.appName}
+        </p>
+      </div>
+    `;
+  }
+
   private getMetricValue(metrics: SystemMetrics, metricName: MetricName): number {
     switch (metricName) {
       case MetricName.CPU:
@@ -77,6 +243,9 @@ export class AlertsScheduler {
       case MetricName.DISK:
         // Use root disk (first one) or the one with highest usage
         return metrics.disk[0]?.usagePercent ?? 0;
+      case MetricName.CRASH_LOOP:
+        // Crash loop handled separately via crash.detected event
+        return 0;
       default:
         return 0;
     }

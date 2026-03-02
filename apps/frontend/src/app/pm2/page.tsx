@@ -24,6 +24,8 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CrashIndicator } from '@/components/crash-indicator';
+import { useCrashStatus } from '@/hooks/use-crash-status';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -168,6 +170,7 @@ function PM2LogsModal({
 
 export default function PM2Page() {
   const { user } = useAuth();
+  const { getCrashStatus } = useCrashStatus();
   const isAdmin = user?.role === 'admin';
   const [processes, setProcesses] = useState<PM2Process[]>([]);
   const [loading, setLoading] = useState(true);
@@ -461,7 +464,15 @@ export default function PM2Page() {
                             />
                           </div>
                           <div>
-                            <div className="font-medium">{proc.name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{proc.name}</span>
+                              {(() => {
+                                const crash = getCrashStatus(String(proc.pm_id), 'pm2');
+                                return crash ? (
+                                  <CrashIndicator restartCount={crash.restartCount} inCrashLoop={crash.inCrashLoop} />
+                                ) : null;
+                              })()}
+                            </div>
                             <div className="text-xs text-white/40 font-mono">
                               ID: {proc.pm_id} {proc.pid ? `| PID: ${proc.pid}` : ''}
                             </div>
@@ -600,7 +611,15 @@ export default function PM2Page() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{proc.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{proc.name}</span>
+                        {(() => {
+                          const crash = getCrashStatus(String(proc.pm_id), 'pm2');
+                          return crash ? (
+                            <CrashIndicator restartCount={crash.restartCount} inCrashLoop={crash.inCrashLoop} />
+                          ) : null;
+                        })()}
+                      </div>
                       <div className="text-xs text-white/40 font-mono">ID: {proc.pm_id}</div>
                     </div>
                     <span

@@ -32,6 +32,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { LogsModal } from '@/components/logs-modal';
+import { CrashIndicator } from '@/components/crash-indicator';
+import { useCrashStatus } from '@/hooks/use-crash-status';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 import { cn } from '@/lib/utils';
@@ -59,6 +61,7 @@ const actionColors: Record<string, string> = {
 
 export default function ContainersPage() {
   const { containers, events, loading, refetch } = useDockerEvents();
+  const { getCrashStatus } = useCrashStatus();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -338,7 +341,15 @@ export default function ContainersPage() {
                             />
                           </div>
                           <div>
-                            <div className="font-medium">{container.name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{container.name}</span>
+                              {(() => {
+                                const crash = getCrashStatus(container.id, 'docker');
+                                return crash ? (
+                                  <CrashIndicator restartCount={crash.restartCount} inCrashLoop={crash.inCrashLoop} />
+                                ) : null;
+                              })()}
+                            </div>
                             <div className="text-xs text-white/40 font-mono">{container.image}</div>
                           </div>
                         </div>
@@ -463,7 +474,15 @@ export default function ContainersPage() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{container.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{container.name}</span>
+                        {(() => {
+                          const crash = getCrashStatus(container.id, 'docker');
+                          return crash ? (
+                            <CrashIndicator restartCount={crash.restartCount} inCrashLoop={crash.inCrashLoop} />
+                          ) : null;
+                        })()}
+                      </div>
                       <div className="text-xs text-white/40 font-mono truncate">{container.image}</div>
                     </div>
                     <span

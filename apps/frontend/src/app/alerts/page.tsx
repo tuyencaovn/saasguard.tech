@@ -16,6 +16,7 @@ import {
   Mail,
   AlertTriangle,
   Ban,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,12 +24,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
 interface AlertThreshold {
   id: string;
-  metricName: 'cpu' | 'ram' | 'disk';
+  metricName: 'cpu' | 'ram' | 'disk' | 'crash_loop';
   operator: '>' | '<' | '=' | '!=' | '>=' | '<=';
   value: number;
   enabled: boolean;
   channels: ('email' | 'telegram')[];
   cooldownMs: number;
+  windowMinutes?: number;
   lastTriggeredAt?: string | null;
 }
 
@@ -60,6 +62,11 @@ const metricConfig: Record<string, { icon: typeof Cpu; iconBg: string; iconColor
     icon: HardDrive,
     iconBg: 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20',
     iconColor: 'text-amber-400',
+  },
+  crash_loop: {
+    icon: RefreshCw,
+    iconBg: 'bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20',
+    iconColor: 'text-red-400',
   },
   container: {
     icon: Box,
@@ -290,10 +297,12 @@ export default function AlertsPage() {
                           </div>
                           <div>
                             <h3 className="font-semibold text-lg">
-                              {threshold.metricName.toUpperCase()} Alert
+                              {threshold.metricName === 'crash_loop' ? 'Crash Loop' : threshold.metricName.toUpperCase()} Alert
                             </h3>
                             <p className="text-sm text-white/40">
-                              Triggers when {threshold.metricName} exceeds threshold
+                              {threshold.metricName === 'crash_loop'
+                                ? 'Detects repeated service restarts'
+                                : `Triggers when ${threshold.metricName} exceeds threshold`}
                             </p>
                           </div>
                         </div>
@@ -336,8 +345,17 @@ export default function AlertsPage() {
                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                           <span className="text-sm text-white/50">Condition</span>
                           <span className="text-sm font-mono">
-                            {threshold.metricName.toUpperCase()} {threshold.operator}{' '}
-                            <span className="text-amber-400 font-semibold">{threshold.value}%</span>
+                            {threshold.metricName === 'crash_loop' ? (
+                              <>
+                                <span className="text-red-400 font-semibold">{threshold.value}</span> restarts in{' '}
+                                <span className="text-red-400 font-semibold">{threshold.windowMinutes || 10}</span> min
+                              </>
+                            ) : (
+                              <>
+                                {threshold.metricName.toUpperCase()} {threshold.operator}{' '}
+                                <span className="text-amber-400 font-semibold">{threshold.value}%</span>
+                              </>
+                            )}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
@@ -427,7 +445,7 @@ export default function AlertsPage() {
                   const metricName = log.alertThreshold?.metricName || 'unknown';
                   const config = metricConfig[metricName] || metricConfig.container;
                   const Icon = config.icon;
-                  const isCritical = log.metricValue >= 90;
+                  const isCritical = metricName === 'crash_loop' || log.metricValue >= 90;
 
                   return (
                     <div key={log.id} className="timeline-item p-6 border-b border-white/5">
@@ -446,7 +464,7 @@ export default function AlertsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-semibold">
-                              {metricName.toUpperCase()} Alert
+                              {metricName === 'crash_loop' ? 'Crash Loop' : metricName.toUpperCase()} Alert
                             </h4>
                             <span
                               className={cn(
@@ -468,7 +486,9 @@ export default function AlertsPage() {
                             </span>
                           </div>
                           <p className="text-sm text-white/50 mb-3">
-                            {metricName.toUpperCase()} exceeded threshold: {Number(log.metricValue).toFixed(1)}% {log.alertThreshold?.operator} {log.alertThreshold?.value}%
+                            {metricName === 'crash_loop'
+                              ? `Crash loop: ${Math.round(Number(log.metricValue))} restarts in ${log.alertThreshold?.windowMinutes || 10} min`
+                              : `${metricName.toUpperCase()} exceeded threshold: ${Number(log.metricValue).toFixed(1)}% ${log.alertThreshold?.operator} ${log.alertThreshold?.value}%`}
                           </p>
                           <div className="flex items-center gap-5 text-xs text-white/40">
                             <span className="flex items-center gap-1.5">
@@ -563,6 +583,7 @@ export default function AlertsPage() {
           channels: editingThreshold.channels,
           enabled: editingThreshold.enabled,
           cooldownMs: editingThreshold.cooldownMs,
+          windowMinutes: editingThreshold.windowMinutes,
         } : undefined}
       />
     </div>

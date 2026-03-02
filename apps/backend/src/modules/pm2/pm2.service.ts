@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import pm2 from 'pm2';
 import { PM2ProcessInfo } from './types/pm2.types';
 
@@ -6,6 +7,8 @@ import { PM2ProcessInfo } from './types/pm2.types';
 export class PM2Service implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PM2Service.name);
   private connected = false;
+
+  constructor(private readonly eventEmitter: EventEmitter2) {}
 
   async onModuleInit() {
     await this.connect();
@@ -67,6 +70,9 @@ export class PM2Service implements OnModuleInit, OnModuleDestroy {
             pid: proc.pid,
           };
         });
+
+        // Emit for crash detection tracking
+        this.eventEmitter.emit('pm2.polled', processes);
 
         resolve(processes);
       });
