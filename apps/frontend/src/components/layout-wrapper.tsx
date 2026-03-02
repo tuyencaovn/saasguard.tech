@@ -6,14 +6,15 @@ import { Sidebar } from '@/components/sidebar';
 import { AuthGuard } from '@/components/auth-guard';
 import { Menu } from 'lucide-react';
 
-const NO_SIDEBAR_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password'];
+const NO_SIDEBAR_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password', '/pricing'];
+const NO_SIDEBAR_EXACT = ['/'];
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const showSidebar = !NO_SIDEBAR_PATHS.some((path) =>
-    pathname.startsWith(path)
-  );
+  const showSidebar =
+    !NO_SIDEBAR_EXACT.includes(pathname) &&
+    !NO_SIDEBAR_PATHS.some((path) => pathname.startsWith(path));
 
   return (
     <AuthGuard>

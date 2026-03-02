@@ -1,8 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 
 // Default brand values
-export const DEFAULT_APP_NAME = 'BimNext Monitor';
-export const DEFAULT_APP_SHORT_NAME = 'BimNext';
+export const DEFAULT_APP_NAME = 'SaaSGuard';
+export const DEFAULT_APP_SHORT_NAME = 'SaaSGuard';
 
 /**
  * Get brand config from environment or use defaults

@@ -38,7 +38,7 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Services', href: '/containers', icon: Box },
   { name: 'Background Services', href: '/pm2', icon: Terminal },
   { name: 'Alerts', href: '/alerts', icon: Bell },
@@ -160,7 +160,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </div>
         <div>
           <span className="font-semibold text-white">{APP_SHORT_NAME}</span>
-          <span className="text-xs text-white/40 block">Server Monitor</span>
+          <span className="text-xs text-white/40 block">SaaS Monitor</span>
         </div>
       </div>
 

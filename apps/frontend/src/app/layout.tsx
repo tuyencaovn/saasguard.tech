@@ -19,8 +19,16 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: 'Real-time server monitoring dashboard',
+  title: {
+    default: `${APP_NAME} — Silent Crash Monitor for Small SaaS`,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: 'Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted before your users notice. Built for small SaaS founders.',
+  openGraph: {
+    title: `${APP_NAME} — Silent Crash Monitor for Small SaaS`,
+    description: 'Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted before your users notice.',
+    type: 'website',
+  },
   icons: {
     icon: [
       { url: '/icon-32.png', sizes: '32x32', type: 'image/png' },

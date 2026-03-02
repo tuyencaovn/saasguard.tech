@@ -5,21 +5,21 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
 
-const PUBLIC_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password'];
+const PUBLIC_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password', '/pricing', '/'];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  const isPublicPath = PUBLIC_PATHS.some((path) => pathname === path || (path !== '/' && pathname.startsWith(path)));
 
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated && !isPublicPath) {
         router.replace('/login');
       } else if (isAuthenticated && pathname === '/login') {
-        router.replace('/');
+        router.replace('/dashboard');
       }
     }
   }, [isAuthenticated, isLoading, isPublicPath, pathname, router]);

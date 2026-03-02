@@ -1,9 +1,13 @@
-# BimNext Server Monitor
+# SaaSGuard — Silent Crash Monitor for Small SaaS
 
-Server monitoring web application with real-time metrics, Docker monitoring, and alert notifications.
+Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted before your users notice. Built for small SaaS founders.
 
 ## Features
 
+- **Crash-Loop Detection**: Detects when your app restarts repeatedly and alerts you immediately
+- **Disk Risk Monitoring**: Predicts disk full events before they happen (warns at 80%, alerts at 90%)
+- **SSL Expiry Monitor**: Tracks all SSL certificates and warns 30, 14, and 7 days before expiry
+- **Health Score**: A single 0–100 score combining CPU, RAM, disk, and service health
 - **Real-time Metrics**: CPU, RAM, Disk, Network usage via WebSocket
 - **Docker Monitoring**: Container status, events, Start/Stop/Restart, logs
 - **PM2 Monitoring**: Process management, CPU/Memory stats, Start/Stop/Restart, logs
@@ -46,10 +50,10 @@ npm run dev:stop
 ## Project Structure
 
 ```
-bimnext_monitor/
+saasguard/
 ├── apps/
 │   ├── backend/      # NestJS API
-│   └── frontend/     # Next.js Dashboard
+│   └── frontend/     # Next.js Dashboard + Landing
 ├── scripts/
 │   └── dev.sh        # Dev startup script
 ├── docs/             # Documentation
@@ -60,11 +64,5 @@ bimnext_monitor/
 ## Documentation
 
 - [Deployment Guide](./docs/deployment-guide.md)
-- [Tech Stack](./docs/tech-stack.md)
 - [Design Guidelines](./docs/design-guidelines.md)
-
-## Wireframes
-
-- [V2 Dashboard](./docs/wireframes/v2/dashboard.html)
-- [V2 Containers](./docs/wireframes/v2/containers.html)
-- [V2 Alerts](./docs/wireframes/v2/alerts.html)
+- [Code Standards](./docs/code-standards.md)

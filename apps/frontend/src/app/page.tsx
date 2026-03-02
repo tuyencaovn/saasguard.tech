@@ -1,532 +1,79 @@
-'use client';
-
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
-import { MetricGauge } from '@/components/metric-gauge';
-import { ConnectionStatus } from '@/components/connection-status';
-import { DiskWarningBanner } from '@/components/disk-warning-banner';
-import { HealthScoreCard } from '@/components/health-score-card';
-import { PerformanceChart } from '@/components/performance-chart';
-import { NetworkChart } from '@/components/network-chart';
-import { LinkSpeedChart } from '@/components/link-speed-chart';
-import { formatBytes, formatUptime } from '@/lib/utils';
-import { Box, Clock, Activity, Cpu, RefreshCw, ChevronRight, Timer, Wifi, ArrowUp, ArrowDown } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { Shield } from 'lucide-react';
+import { HeroSection } from '@/components/landing/hero-section';
+import { PainPointsSection } from '@/components/landing/pain-points-section';
+import { FeaturesSection } from '@/components/landing/features-section';
+import { SocialProofSection } from '@/components/landing/social-proof-section';
+import { CTASection } from '@/components/landing/cta-section';
 
-interface MetricsDataPoint {
-  timestamp: number;
-  cpu: number;
-  ram: number;
-  disk: number;
-}
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
 
-interface NetworkDataPoint {
-  timestamp: number;
-  rx: number;
-  tx: number;
-}
-
-interface LinkSpeedDataPoint {
-  timestamp: number;
-  speed: number; // Mbps
-}
-
-type TimeRange = '15m' | '1h' | '6h' | '24h';
-
-const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; maxPoints: number; sampleInterval: number }> = {
-  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 60, sampleInterval: 15 * 1000 }, // 15s
-  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 60, sampleInterval: 60 * 1000 }, // 1m
-  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 72, sampleInterval: 5 * 60 * 1000 }, // 5m
-  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
+export const metadata: Metadata = {
+  title: `${APP_NAME} — Silent Crash Monitor for Small SaaS`,
+  description:
+    'Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted before your users notice.',
 };
 
-// Format network speed (bytes per second to MB/s)
-function formatNetworkSpeed(bytesPerSec: number): string {
-  const mbps = bytesPerSec / (1024 * 1024);
-  if (mbps < 0.01) return '0';
-  if (mbps < 1) return mbps.toFixed(2);
-  if (mbps < 10) return mbps.toFixed(1);
-  return Math.round(mbps).toString();
-}
-
-// Fetch metrics history from API
-async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/metrics/history?minutes=${minutes}`);
-    if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
-    const data = await res.json();
-    const metrics = data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({
-      timestamp: new Date(item.timestamp).getTime(),
-      cpu: Number(item.cpuPercent),
-      ram: Number(item.ramPercent),
-      disk: Number(item.diskPercent),
-    }));
-    const network = data.map((item: { timestamp: string; networkRx?: number; networkTx?: number }) => ({
-      timestamp: new Date(item.timestamp).getTime(),
-      rx: Number(item.networkRx || 0),
-      tx: Number(item.networkTx || 0),
-    }));
-    const linkSpeed = data.map((item: { timestamp: string; networkSpeed?: number }) => ({
-      timestamp: new Date(item.timestamp).getTime(),
-      speed: Number(item.networkSpeed || 0),
-    }));
-    return { metrics, network, linkSpeed };
-  } catch {
-    return { metrics: [], network: [], linkSpeed: [] };
-  }
-}
-
-export default function DashboardPage() {
-  const { metrics } = useMetrics();
-  const { containers, refetch: refetchContainers } = useDockerEvents();
-  const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
-  const [networkHistory, setNetworkHistory] = useState<NetworkDataPoint[]>([]);
-  const [linkSpeedHistory, setLinkSpeedHistory] = useState<LinkSpeedDataPoint[]>([]);
-  const [timeRange, setTimeRange] = useState<TimeRange>('15m');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const lastTimestampRef = useRef<string | null>(null);
-  const historyLoadedRef = useRef<TimeRange | null>(null);
-  // Track peak values between chart sample intervals to capture brief spikes
-  const peakMetricsRef = useRef<{ cpu: number; ram: number; disk: number }>({ cpu: 0, ram: 0, disk: 0 });
-  const peakNetworkRef = useRef<{ rx: number; tx: number }>({ rx: 0, tx: 0 });
-
-  // Load history from API on mount and when time range changes
-  useEffect(() => {
-    if (historyLoadedRef.current === timeRange) return;
-
-    const config = TIME_RANGE_CONFIG[timeRange];
-    fetchMetricsHistory(config.minutes).then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
-      setMetricsHistory(metricsData);
-      setNetworkHistory(networkData);
-      setLinkSpeedHistory(linkSpeedData);
-      historyLoadedRef.current = timeRange;
-    });
-  }, [timeRange]);
-
-  // Add new metrics to history (from WebSocket), tracking peak values between samples
-  useEffect(() => {
-    if (metrics && metrics.timestamp !== lastTimestampRef.current) {
-      lastTimestampRef.current = metrics.timestamp;
-      const now = Date.now();
-      const config = TIME_RANGE_CONFIG[timeRange];
-
-      const currentCpu = metrics.cpu.usage;
-      const currentRam = metrics.ram.usagePercent;
-      const currentDisk = metrics.disk[0]?.usagePercent ?? 0;
-      const currentRx = metrics.network?.rx ?? 0;
-      const currentTx = metrics.network?.tx ?? 0;
-
-      // Update peak values (track max between sample intervals)
-      peakMetricsRef.current = {
-        cpu: Math.max(peakMetricsRef.current.cpu, currentCpu),
-        ram: Math.max(peakMetricsRef.current.ram, currentRam),
-        disk: Math.max(peakMetricsRef.current.disk, currentDisk),
-      };
-      peakNetworkRef.current = {
-        rx: Math.max(peakNetworkRef.current.rx, currentRx),
-        tx: Math.max(peakNetworkRef.current.tx, currentTx),
-      };
-
-      setMetricsHistory((prev) => {
-        const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
-          return prev;
-        }
-
-        // Use peak values for the data point to capture brief spikes
-        const dataPoint: MetricsDataPoint = {
-          timestamp: now,
-          cpu: peakMetricsRef.current.cpu,
-          ram: peakMetricsRef.current.ram,
-          disk: peakMetricsRef.current.disk,
-        };
-
-        // Reset peaks after sampling
-        peakMetricsRef.current = { cpu: currentCpu, ram: currentRam, disk: currentDisk };
-
-        const cutoffTime = now - config.minutes * 60 * 1000;
-        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
-        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
-      });
-
-      setNetworkHistory((prev) => {
-        const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
-          return prev;
-        }
-
-        const dataPoint: NetworkDataPoint = {
-          timestamp: now,
-          rx: peakNetworkRef.current.rx,
-          tx: peakNetworkRef.current.tx,
-        };
-
-        // Reset peaks after sampling
-        peakNetworkRef.current = { rx: currentRx, tx: currentTx };
-
-        const cutoffTime = now - config.minutes * 60 * 1000;
-        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
-        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
-      });
-
-      setLinkSpeedHistory((prev) => {
-        const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
-          return prev;
-        }
-
-        const dataPoint: LinkSpeedDataPoint = {
-          timestamp: now,
-          speed: metrics.network?.speed ?? 0,
-        };
-
-        const cutoffTime = now - config.minutes * 60 * 1000;
-        const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
-        return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
-      });
-    }
-  }, [metrics, timeRange]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    // Refetch containers only, keep metrics history intact
-    await refetchContainers();
-    // Brief delay to show refresh animation
-    setTimeout(() => setIsRefreshing(false), 500);
-  }, [refetchContainers]);
-
-  const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTimeRange(e.target.value as TimeRange);
-  };
-
-  const runningContainers = containers.filter((c) => c.state === 'running').length;
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      {/* Header */}
-      <header className="sticky top-0 z-10 header-blur border-b border-white/5 px-4 pl-14 md:px-8 py-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-sm text-white/40">Real-time server monitoring</p>
-          </div>
-
-          <div className="flex items-center gap-2 md:gap-4">
-            <ConnectionStatus />
-
-            <select
-              value={timeRange}
-              onChange={handleTimeRangeChange}
-              className="px-2 md:px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all cursor-pointer max-w-[140px] md:max-w-none"
+    <div className="min-h-screen text-white relative">
+      {/* Nav */}
+      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/5 bg-[#0f0f23]/70 backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-white tracking-tight">{APP_NAME}</span>
+          </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/pricing"
+              className="text-sm text-white/50 hover:text-white transition-colors px-3 py-2 hidden sm:block"
             >
-              {Object.entries(TIME_RANGE_CONFIG).map(([key, { label }]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-xl transition-all disabled:opacity-50 shrink-0"
+              Pricing
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-lg transition-all duration-200"
             >
-              <RefreshCw className={cn('w-5 h-5', isRefreshing && 'animate-spin')} />
-            </button>
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg shadow-violet-500/20"
+            >
+              Get started
+            </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Dashboard Content */}
-      <div className="p-4 md:p-8">
-        {!metrics ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-white/40">Loading metrics...</div>
+      {/* Page content */}
+      <div className="pt-16">
+        <HeroSection />
+        <PainPointsSection />
+        <FeaturesSection />
+        <SocialProofSection />
+        <CTASection />
+
+        {/* Footer */}
+        <footer className="border-t border-white/5 py-12 px-4">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/25">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <Shield className="w-3 h-3 text-white" />
+              </div>
+              <span className="font-medium">{APP_NAME}</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link href="/pricing" className="hover:text-white/50 transition-colors">Pricing</Link>
+              <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
+            </div>
+            <p>&copy; {new Date().getFullYear()} {APP_NAME}</p>
           </div>
-        ) : (
-          <>
-            {/* Health Score Card */}
-            {metrics.healthScore && (
-              <HealthScoreCard healthScore={metrics.healthScore} />
-            )}
-
-            {/* Disk Warning Banner */}
-            <DiskWarningBanner diskPercent={metrics.disk[0]?.usagePercent ?? 0} />
-
-            {/* Metric Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-              <MetricGauge
-                label="Processing Power"
-                value={metrics.cpu.usage}
-                thresholds={{ warning: 70, critical: 90 }}
-                color="violet"
-                subtitle={`${metrics.cpu.cores} cores / ${metrics.cpu.speed} GHz`}
-              />
-
-              <MetricGauge
-                label="Memory"
-                value={metrics.ram.usagePercent}
-                thresholds={{ warning: 80, critical: 95 }}
-                color="cyan"
-                subtitle={`${formatBytes(metrics.ram.used)} / ${formatBytes(metrics.ram.total)}`}
-              />
-
-              <MetricGauge
-                label="Storage Space"
-                value={metrics.disk[0]?.usagePercent ?? 0}
-                thresholds={{ warning: 85, critical: 95 }}
-                color="amber"
-                subtitle={metrics.disk[0] ? `${formatBytes(metrics.disk[0].used)} / ${formatBytes(metrics.disk[0].size)}` : '/'}
-              />
-
-              {/* Network Card */}
-              <div className="glass-card metric-network rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                      <Wifi className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <span className="text-sm font-medium text-white/60">Network</span>
-                  </div>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 status-running" />
-                </div>
-
-                <div className="flex flex-col items-center justify-center gap-4 py-2">
-                  {/* Upload */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <ArrowUp className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-white">
-                        {formatNetworkSpeed(metrics.network?.tx || 0)}
-                      </span>
-                      <span className="text-white/40 text-sm">MB/s</span>
-                    </div>
-                  </div>
-
-                  {/* Download */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <ArrowDown className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-white">
-                        {formatNetworkSpeed(metrics.network?.rx || 0)}
-                      </span>
-                      <span className="text-white/40 text-sm">MB/s</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center text-white/40 text-xs mt-4">
-                  {metrics.network?.interface || 'eth0'}
-                  {metrics.network?.speed && metrics.network.speed > 0 && (
-                    <span> - {metrics.network.speed >= 1000 ? `${metrics.network.speed / 1000} Gbps` : `${metrics.network.speed} Mbps`}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-              {/* Main Chart */}
-              <div className="xl:col-span-2 glass-card rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold">System Performance</h3>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-violet-500" />
-                      <span className="text-white/60">CPU</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-cyan-500" />
-                      <span className="text-white/60">RAM</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-amber-500" />
-                      <span className="text-white/60">Disk</span>
-                    </div>
-                  </div>
-                </div>
-                <PerformanceChart data={metricsHistory} timeRange={timeRange} />
-              </div>
-
-              {/* Quick Stats */}
-              <div className="glass-card rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-6">Quick Stats</h3>
-
-                <div className="space-y-4">
-                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                        <Timer className="w-5 h-5 text-emerald-400" />
-                      </div>
-                      <span className="text-white/60">Uptime</span>
-                    </div>
-                    <span className="font-mono font-semibold">
-                      {formatUptime(metrics.uptime.uptime)}
-                    </span>
-                  </div>
-
-                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                        <Activity className="w-5 h-5 text-violet-400" />
-                      </div>
-                      <span className="text-white/60">Free RAM</span>
-                    </div>
-                    <span className="font-mono font-semibold">{formatBytes(metrics.ram.free)}</span>
-                  </div>
-
-                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <span className="text-white/60">Last Update</span>
-                    </div>
-                    <span className="font-mono font-semibold text-sm">
-                      {new Date(metrics.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-
-                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                        <Cpu className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <span className="text-white/60">CPU Cores</span>
-                    </div>
-                    <span className="font-mono font-semibold">{metrics.cpu.cores}</span>
-                  </div>
-
-                  <div className="relative flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                        <Box className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <span className="text-white/60">Services</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono font-semibold text-emerald-400">{runningContainers}</span>
-                      <span className="text-white/30">/</span>
-                      <span className="font-mono text-white/40">{containers.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Network Charts Row */}
-            {(() => {
-              const hasLinkSpeed = linkSpeedHistory.some(d => d.speed > 0);
-              return (
-                <div className={`grid grid-cols-1 ${hasLinkSpeed ? 'xl:grid-cols-2' : ''} gap-6 mb-8`}>
-                  {/* Network Traffic Chart */}
-                  <div className="glass-card rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold">Network Traffic</h3>
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full bg-blue-500" />
-                          <span className="text-white/60">Download</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                          <span className="text-white/60">Upload</span>
-                        </div>
-                      </div>
-                    </div>
-                    <NetworkChart data={networkHistory} timeRange={timeRange} />
-                  </div>
-
-                  {/* Interface Link Speed Chart - only show if data available */}
-                  {hasLinkSpeed && (
-                    <div className="glass-card rounded-2xl p-6">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold">Link Speed</h3>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full bg-violet-500" />
-                            <span className="text-white/60">{metrics.network?.interface || 'eth0'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <LinkSpeedChart
-                        data={linkSpeedHistory}
-                        timeRange={timeRange}
-                        interfaceName={metrics.network?.interface || 'eth0'}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Container Overview */}
-            <div className="glass-card rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold">Active Services</h3>
-                <Link
-                  href="/containers"
-                  className="text-sm text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
-                >
-                  View all
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-
-              {containers.length === 0 ? (
-                <div className="text-center py-8 text-white/40">
-                  No containers found. Docker may not be connected.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {containers.slice(0, 4).map((container) => (
-                    <div
-                      key={container.id}
-                      className={cn(
-                        'container-card p-4 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 cursor-pointer',
-                        container.state !== 'running' && 'opacity-50'
-                      )}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className={cn(
-                            'w-10 h-10 rounded-xl flex items-center justify-center',
-                            container.state === 'running' ? 'bg-emerald-500/10' : 'bg-white/5'
-                          )}
-                        >
-                          <Box
-                            className={cn(
-                              'w-5 h-5',
-                              container.state === 'running' ? 'text-emerald-400' : 'text-white/30'
-                            )}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{container.name}</div>
-                          <div className="text-xs text-white/40 font-mono truncate">{container.image}</div>
-                        </div>
-                        <span
-                          className={cn(
-                            'w-2 h-2 rounded-full',
-                            container.state === 'running' ? 'bg-emerald-500 status-running' : 'bg-white/30'
-                          )}
-                        />
-                      </div>
-                      <div className="text-xs text-white/40">
-                        {container.state === 'running' ? 'Running' : 'Stopped'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        </footer>
       </div>
     </div>
   );
