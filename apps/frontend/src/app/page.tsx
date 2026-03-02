@@ -5,6 +5,7 @@ import { useMetrics, useDockerEvents } from '@/hooks/use-socket';
 import { MetricGauge } from '@/components/metric-gauge';
 import { ConnectionStatus } from '@/components/connection-status';
 import { DiskWarningBanner } from '@/components/disk-warning-banner';
+import { HealthScoreCard } from '@/components/health-score-card';
 import { PerformanceChart } from '@/components/performance-chart';
 import { NetworkChart } from '@/components/network-chart';
 import { LinkSpeedChart } from '@/components/link-speed-chart';
@@ -245,13 +246,18 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
+            {/* Health Score Card */}
+            {metrics.healthScore && (
+              <HealthScoreCard healthScore={metrics.healthScore} />
+            )}
+
             {/* Disk Warning Banner */}
             <DiskWarningBanner diskPercent={metrics.disk[0]?.usagePercent ?? 0} />
 
             {/* Metric Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
               <MetricGauge
-                label="CPU"
+                label="Processing Power"
                 value={metrics.cpu.usage}
                 thresholds={{ warning: 70, critical: 90 }}
                 color="violet"
@@ -267,7 +273,7 @@ export default function DashboardPage() {
               />
 
               <MetricGauge
-                label="Disk"
+                label="Storage Space"
                 value={metrics.disk[0]?.usagePercent ?? 0}
                 thresholds={{ warning: 85, critical: 95 }}
                 color="amber"
@@ -401,7 +407,7 @@ export default function DashboardPage() {
                       <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
                         <Box className="w-5 h-5 text-blue-400" />
                       </div>
-                      <span className="text-white/60">Containers</span>
+                      <span className="text-white/60">Services</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="font-mono font-semibold text-emerald-400">{runningContainers}</span>
@@ -462,7 +468,7 @@ export default function DashboardPage() {
             {/* Container Overview */}
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold">Active Containers</h3>
+                <h3 className="text-lg font-semibold">Active Services</h3>
                 <Link
                   href="/containers"
                   className="text-sm text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"

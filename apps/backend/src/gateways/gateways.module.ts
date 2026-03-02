@@ -3,6 +3,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MetricsGateway } from './metrics.gateway';
 import { GatewayListener } from './gateway.listener';
+import { MetricsModule } from '../modules/metrics/metrics.module';
+import { AlertsModule } from '../modules/alerts/alerts.module';
+import { SslModule } from '../modules/ssl/ssl.module';
 
 @Module({
   imports: [
@@ -15,6 +18,9 @@ import { GatewayListener } from './gateway.listener';
         signOptions: { expiresIn: '24h' },
       }),
     }),
+    MetricsModule,
+    AlertsModule,
+    SslModule,
   ],
   providers: [MetricsGateway, GatewayListener],
   exports: [MetricsGateway],

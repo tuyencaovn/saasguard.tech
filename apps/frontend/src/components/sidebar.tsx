@@ -39,8 +39,8 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Containers', href: '/containers', icon: Box },
-  { name: 'PM2', href: '/pm2', icon: Terminal },
+  { name: 'Services', href: '/containers', icon: Box },
+  { name: 'Background Services', href: '/pm2', icon: Terminal },
   { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'SSL Certificates', href: '/ssl', icon: ShieldCheck },
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },

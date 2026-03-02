@@ -71,3 +71,21 @@ export interface DockerEvent {
   containerName: string;
   timestamp: Date;
 }
+
+export interface HealthFactors {
+  cpu: number;
+  ram: number;
+  disk: number;
+  containers: number;
+  ssl: number;
+}
+
+export interface HealthScore {
+  score: number;
+  status: 'good' | 'warning' | 'critical';
+  factors: HealthFactors;
+}
+
+export interface SystemMetricsWithHealth extends SystemMetrics {
+  healthScore?: HealthScore;
+}

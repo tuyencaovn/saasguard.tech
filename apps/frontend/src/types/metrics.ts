@@ -35,6 +35,20 @@ export interface NetworkMetrics {
   speed: number; // link speed in Mbps (0 if unknown)
 }
 
+export interface HealthFactors {
+  cpu: number;
+  ram: number;
+  disk: number;
+  containers: number;
+  ssl: number;
+}
+
+export interface HealthScore {
+  score: number;
+  status: 'good' | 'warning' | 'critical';
+  factors: HealthFactors;
+}
+
 export interface SystemMetrics {
   cpu: CpuMetrics;
   ram: RamMetrics;
@@ -42,6 +56,7 @@ export interface SystemMetrics {
   network: NetworkMetrics;
   uptime: UptimeMetrics;
   timestamp: string;
+  healthScore?: HealthScore;
 }
 
 export interface ContainerInfo {
