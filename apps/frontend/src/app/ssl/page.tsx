@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils';
 import { SslStatusBadge } from '@/components/ssl-status-badge';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ConnectionStatus } from '@/components/connection-status';
+import { UpgradePrompt } from '@/components/upgrade-prompt';
+import { TIER_LIMITS } from '@/lib/tier-limits';
+import { useAuth } from '@/contexts/auth-context';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -23,6 +26,8 @@ interface SslMonitor {
 }
 
 export default function SslPage() {
+  const { user } = useAuth();
+  const userTier = user?.tier ?? 'free';
   const [monitors, setMonitors] = useState<SslMonitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -140,6 +145,18 @@ export default function SslPage() {
 
       {/* Content */}
       <div className="p-4 md:p-8">
+        {/* Upgrade prompt when approaching/at free tier SSL limit */}
+        {userTier === 'free' && monitors.length >= TIER_LIMITS.free.sslDomains && (
+          <div className="mb-6">
+            <UpgradePrompt
+              feature="SSL Domain Limit Reached"
+              description={`Free tier allows ${TIER_LIMITS.free.sslDomains} domains. Upgrade Pro to monitor up to ${TIER_LIMITS.pro.sslDomains} domains.`}
+              variant="banner"
+              dismissible
+            />
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12 text-white/40">Loading SSL monitors...</div>
         ) : monitors.length === 0 ? (

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Shield } from 'lucide-react';
+import { Shield, Check, X } from 'lucide-react';
 import { PricingCard } from '@/components/landing/pricing-card';
+import { PRO_PRICE, PRO_STRIPE_LINK, TIER_LIMITS } from '@/lib/tier-limits';
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
 
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
 const FREE_FEATURES = [
   '1 server monitored',
   'Real-time CPU, RAM, disk metrics',
-  'Basic crash detection',
   'Email alerts',
-  'SSL certificate monitoring',
+  `SSL monitoring (${TIER_LIMITS.free.sslDomains} domains)`,
   'Health score dashboard',
+  `${TIER_LIMITS.free.retentionDays}-day metric history`,
 ];
 
 const PRO_FEATURES = [
@@ -24,11 +25,58 @@ const PRO_FEATURES = [
   'Crash-loop detection with history',
   'Disk risk prediction',
   'SSL expiry alerts (30/14/7 days)',
+  `SSL monitoring (${TIER_LIMITS.pro.sslDomains} domains)`,
   'Email + Telegram alerts',
   'Health score with trends',
   'PM2 process monitoring',
+  `${TIER_LIMITS.pro.retentionDays}-day metric history`,
   'Priority support',
 ];
+
+const COMPARISON_ROWS: { label: string; free: string | boolean; pro: string | boolean }[] = [
+  { label: 'Servers',            free: '1',                                 pro: 'Unlimited' },
+  { label: 'SSL domains',        free: `${TIER_LIMITS.free.sslDomains}`,    pro: `${TIER_LIMITS.pro.sslDomains}` },
+  { label: 'Metric history',     free: `${TIER_LIMITS.free.retentionDays}d`, pro: `${TIER_LIMITS.pro.retentionDays}d` },
+  { label: 'Email alerts',       free: true,                                pro: true },
+  { label: 'Telegram alerts',    free: false,                               pro: true },
+  { label: 'Crash-loop detection', free: false,                             pro: true },
+  { label: 'Disk risk alerts',   free: true,                                pro: true },
+  { label: 'PM2 monitoring',     free: true,                                pro: true },
+  { label: 'Health score',       free: true,                                pro: true },
+  { label: 'Priority support',   free: false,                               pro: true },
+];
+
+const FAQS = [
+  {
+    q: 'Can I self-host for free?',
+    a: 'Yes. Run the install script on your server and use the Free tier indefinitely. No credit card required.',
+  },
+  {
+    q: 'How do I install SaaSGuard?',
+    a: 'One command: curl -s https://saasguard.tech/install.sh | bash — Docker and Docker Compose required.',
+  },
+  {
+    q: 'How does Pro billing work?',
+    a: 'Pro is $' + PRO_PRICE + '/mo. Contact us to upgrade — we\'ll send a payment link and manually activate Pro on your account.',
+  },
+  {
+    q: 'What happens if I exceed the free tier limits?',
+    a: 'The dashboard shows upgrade prompts. Your existing monitoring continues to work — we won\'t cut you off without warning.',
+  },
+  {
+    q: 'Do you store my server metrics in the cloud?',
+    a: 'No. SaaSGuard runs entirely on your own server. Your metrics never leave your infrastructure.',
+  },
+];
+
+function CellValue({ value }: { value: string | boolean }) {
+  if (typeof value === 'boolean') {
+    return value
+      ? <Check className="w-4 h-4 text-emerald-400 mx-auto" />
+      : <X className="w-4 h-4 text-white/20 mx-auto" />;
+  }
+  return <span className="text-white/70 text-sm">{value}</span>;
+}
 
 export default function PricingPage() {
   return (
@@ -53,7 +101,7 @@ export default function PricingPage() {
               href="/login"
               className="text-sm px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg shadow-violet-500/20"
             >
-              Get started
+              Get started free
             </Link>
           </div>
         </div>
@@ -62,61 +110,88 @@ export default function PricingPage() {
       <div className="pt-16">
         {/* Header */}
         <section className="py-24 px-4 text-center relative overflow-hidden">
-          {/* Background glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-
           <div className="relative">
-            <p className="reveal-up text-sm font-medium text-violet-400/80 uppercase tracking-widest mb-4">
+            <p className="text-sm font-medium text-violet-400/80 uppercase tracking-widest mb-4">
               Pricing
             </p>
-            <h1 className="reveal-up reveal-delay-1 text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight">
               Simple, honest pricing
             </h1>
-            <p className="reveal-up reveal-delay-2 text-white/40 text-lg max-w-xl mx-auto">
-              Start free. Upgrade when you need more servers or advanced alerts.
+            <p className="text-white/40 text-lg max-w-xl mx-auto">
+              Start free on your own server. Upgrade when you need more servers or advanced alerts.
               No hidden fees, no per-alert charges.
             </p>
           </div>
         </section>
 
         {/* Pricing cards */}
-        <section className="pb-28 px-4">
+        <section className="pb-16 px-4">
           <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            <div className="reveal-up reveal-delay-2">
-              <PricingCard
-                name="Free"
-                price="$0"
-                description="For indie hackers running a single server."
-                features={FREE_FEATURES}
-                cta="Start monitoring free"
-                ctaHref="/login"
-              />
-            </div>
-            <div className="reveal-up reveal-delay-3">
-              <PricingCard
-                name="Pro"
-                price="$19"
-                period="mo"
-                description="For founders with multiple servers and serious uptime needs."
-                features={PRO_FEATURES}
-                cta="Start Pro trial"
-                ctaHref="/login"
-                highlighted
-                badge="Most popular"
-              />
+            <PricingCard
+              name="Free"
+              price="$0"
+              description="For indie hackers running a single server."
+              features={FREE_FEATURES}
+              cta="Start monitoring free"
+              ctaHref="/login"
+            />
+            <PricingCard
+              name="Pro"
+              price={`$${PRO_PRICE}`}
+              period="mo"
+              description="For founders with multiple servers and serious uptime needs."
+              features={PRO_FEATURES}
+              cta={`Upgrade to Pro — $${PRO_PRICE}/mo`}
+              ctaHref={PRO_STRIPE_LINK}
+              highlighted
+              badge="Most popular"
+            />
+          </div>
+        </section>
+
+        {/* Feature comparison table */}
+        <section className="py-16 px-4">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-8 text-white/90">
+              Full feature comparison
+            </h2>
+            <div className="rounded-2xl border border-white/10 overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-3 bg-white/5 px-6 py-3 text-sm font-semibold text-white/60 uppercase tracking-wider">
+                <span>Feature</span>
+                <span className="text-center">Free</span>
+                <span className="text-center text-violet-400">Pro</span>
+              </div>
+              {COMPARISON_ROWS.map((row, idx) => (
+                <div
+                  key={row.label}
+                  className={`grid grid-cols-3 px-6 py-3.5 items-center ${idx < COMPARISON_ROWS.length - 1 ? 'border-b border-white/5' : ''}`}
+                >
+                  <span className="text-sm text-white/70">{row.label}</span>
+                  <div className="text-center"><CellValue value={row.free} /></div>
+                  <div className="text-center"><CellValue value={row.pro} /></div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* FAQ teaser */}
-        <section className="py-16 px-4 border-t border-white/5 text-center">
-          <p className="text-white/30 text-sm">
-            Questions?{' '}
-            <Link href="/login" className="text-violet-400 hover:text-violet-300 transition-colors">
-              Contact us
-            </Link>
-            {' '}&mdash; we respond within 24 hours.
-          </p>
+        {/* FAQ */}
+        <section className="py-16 px-4 border-t border-white/5">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-10 text-white/90">
+              Frequently asked questions
+            </h2>
+            <div className="space-y-6">
+              {FAQS.map((faq) => (
+                <div key={faq.q} className="border-b border-white/5 pb-6 last:border-0">
+                  <h3 className="font-semibold text-white mb-2">{faq.q}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Footer */}
@@ -131,6 +206,7 @@ export default function PricingPage() {
             <div className="flex items-center gap-6">
               <Link href="/" className="hover:text-white/50 transition-colors">Home</Link>
               <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
+              <a href="mailto:support@saasguard.tech" className="hover:text-white/50 transition-colors">Support</a>
             </div>
             <p>&copy; {new Date().getFullYear()} {APP_NAME}</p>
           </div>

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/config/brand';
+import { UpgradePrompt } from '@/components/upgrade-prompt';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -47,6 +48,7 @@ export default function NotificationSettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAdmin = user?.role === 'admin';
+  const isFree = (user?.tier ?? 'free') === 'free';
 
   // Read tab from URL query param, default to 'email'
   const initialTab = (searchParams.get('tab') as TabType) || 'email';
@@ -453,6 +455,15 @@ export default function NotificationSettingsPage() {
             {/* Telegram Settings */}
             {activeTab === 'telegram' && (
               <div className="glass-card rounded-2xl p-6 space-y-6">
+                {/* Pro upgrade prompt for free users */}
+                {isFree && (
+                  <UpgradePrompt
+                    feature="Telegram Notifications"
+                    description="Telegram alerts are a Pro feature. Upgrade to get instant crash notifications on your phone."
+                    variant="inline"
+                  />
+                )}
+
                 {/* Enable Toggle */}
                 <div className="flex items-center justify-between pb-4 border-b border-white/10">
                   <div>

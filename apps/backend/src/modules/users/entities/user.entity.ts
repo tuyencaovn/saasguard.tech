@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.VIEWER })
   role: UserRole;
 
+  @Column({ default: 'free' })
+  tier: 'free' | 'pro';
+
   @Column({ default: true })
   isActive: boolean;
 

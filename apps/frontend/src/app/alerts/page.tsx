@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UpgradePrompt } from '@/components/upgrade-prompt';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -78,6 +79,7 @@ const metricConfig: Record<string, { icon: typeof Cpu; iconBg: string; iconColor
 export default function AlertsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const userTier = user?.tier ?? 'free';
   const [thresholds, setThresholds] = useState<AlertThreshold[]>([]);
   const [alertLogs, setAlertLogs] = useState<AlertLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,6 +256,18 @@ export default function AlertsPage() {
 
         {activeTab === 'rules' && (
           <>
+            {/* Crash detection upgrade prompt for free users */}
+            {userTier === 'free' && (
+              <div className="mb-6">
+                <UpgradePrompt
+                  feature="Crash-Loop Detection"
+                  description="Automatically detect and alert when services restart repeatedly. Available on Pro."
+                  variant="banner"
+                  dismissible
+                />
+              </div>
+            )}
+
             {/* Alert Rules Grid */}
             {loading ? (
               <div className="text-center py-12 text-white/40">Loading thresholds...</div>
