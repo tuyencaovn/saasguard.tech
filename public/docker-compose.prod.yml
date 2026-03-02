@@ -17,7 +17,7 @@ services:
       retries: 5
 
   backend:
-    image: ghcr.io/saasguard/backend:latest
+    image: ghcr.io/tuyencaovn/saasguard.tech/backend:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -31,6 +31,8 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3006}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       APP_NAME: ${APP_NAME:-SaaSGuard}
@@ -45,14 +47,17 @@ services:
       retries: 5
 
   frontend:
-    image: ghcr.io/saasguard/frontend:latest
+    image: ghcr.io/tuyencaovn/saasguard.tech/frontend:latest
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     environment:
       NEXT_PUBLIC_APP_NAME: ${APP_NAME:-SaaSGuard}
-      NEXT_PUBLIC_API_URL: http://localhost:3005
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3005}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-http://localhost:3005}
+      PORT: 3006
+      HOSTNAME: 0.0.0.0
     ports:
       - "3006:3006"
     healthcheck:

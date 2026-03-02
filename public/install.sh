@@ -7,7 +7,7 @@
 set -e
 
 INSTALL_DIR="${HOME}/saasguard"
-COMPOSE_URL="https://saasguard.tech/docker-compose.prod.yml"
+COMPOSE_URL="https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/public/docker-compose.prod.yml"
 DASHBOARD_PORT=3006
 
 # Colors
@@ -82,10 +82,24 @@ fi
 if [ "${NEED_CONFIG:-false}" = "true" ]; then
   echo ""
   echo "─── Configuration ───────────────────────────────────────────"
+
+  # Admin email
   read -r -p "  Admin email: " ADMIN_EMAIL
   if [ -z "$ADMIN_EMAIL" ]; then
     error "Admin email is required"
   fi
+
+  # Admin password
+  read -r -s -p "  Admin password (min 8 chars): " ADMIN_PASSWORD
+  echo ""
+  if [ ${#ADMIN_PASSWORD} -lt 8 ]; then
+    error "Password must be at least 8 characters"
+  fi
+
+  # Detect public IP and let user confirm
+  PUBLIC_IP=$(curl -sf https://ifconfig.me 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+  read -r -p "  Server IP/domain [${PUBLIC_IP}]: " USER_IP
+  SERVER_HOST="${USER_IP:-$PUBLIC_IP}"
 
   read -r -p "  Telegram Bot Token (optional, press Enter to skip): " TELEGRAM_TOKEN
   if [ -n "$TELEGRAM_TOKEN" ]; then
@@ -100,12 +114,15 @@ NODE_ENV=production
 JWT_SECRET=${JWT_SECRET}
 DATABASE_PASSWORD=${DB_PASSWORD}
 ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
 TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 APP_NAME=SaaSGuard
 APP_SHORT_NAME=SaaSGuard
 NEXT_PUBLIC_APP_NAME=SaaSGuard
-NEXT_PUBLIC_API_URL=http://localhost:3005
+NEXT_PUBLIC_API_URL=http://${SERVER_HOST}:3005
+NEXT_PUBLIC_WS_URL=http://${SERVER_HOST}:3005
+FRONTEND_URL=http://${SERVER_HOST}:3006
 EOF
 
   chmod 600 .env
@@ -150,12 +167,13 @@ fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
-HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+# Use SERVER_HOST if set (fresh install), otherwise fall back to hostname -I
+DISPLAY_HOST="${SERVER_HOST:-$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost')}"
 
 echo ""
 echo "  ✓ SaaSGuard installed successfully!"
 echo ""
-echo "  Dashboard: http://${HOST_IP}:${DASHBOARD_PORT}"
+echo "  Dashboard: http://${DISPLAY_HOST}:${DASHBOARD_PORT}"
 echo "  Admin:     ${ADMIN_EMAIL:-see .env}"
 echo ""
 echo "  Useful commands:"
