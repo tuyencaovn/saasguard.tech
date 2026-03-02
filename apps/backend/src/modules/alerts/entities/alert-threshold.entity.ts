@@ -14,6 +14,7 @@ export enum MetricName {
   RAM = 'ram',
   DISK = 'disk',
   CRASH_LOOP = 'crash_loop',
+  SSL_EXPIRY = 'ssl_expiry',
 }
 
 export enum Operator {

@@ -23,6 +23,7 @@ import {
   EyeOff,
   CheckCircle2,
   XCircle,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ const navigation: NavItem[] = [
   { name: 'Containers', href: '/containers', icon: Box },
   { name: 'PM2', href: '/pm2', icon: Terminal },
   { name: 'Alerts', href: '/alerts', icon: Bell },
+  { name: 'SSL Certificates', href: '/ssl', icon: ShieldCheck },
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
