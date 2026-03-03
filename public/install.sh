@@ -165,6 +165,7 @@ BIND_HOST=${BIND_HOST}
 API_PORT=${API_PORT}
 DASH_PORT=${DASH_PORT}
 BACKEND_PORT=${API_PORT}
+DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 999)
 EOF
 
   chmod 600 .env
