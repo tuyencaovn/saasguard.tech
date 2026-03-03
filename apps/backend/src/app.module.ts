@@ -49,7 +49,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
         password: configService.get('DATABASE_PASSWORD', 'M0n!t0r_D3v@2025'),
         database: configService.get('DATABASE_NAME', 'bimnext_monitor'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        synchronize: true, // self-hosted product — auto-create/update tables
         logging: configService.get('NODE_ENV') === 'development',
       }),
     }),
