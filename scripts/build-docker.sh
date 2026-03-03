@@ -9,9 +9,15 @@ cd "$(dirname "$0")/.."
 
 REGISTRY="ghcr.io/tuyencaovn/saasguard.tech"
 TAG="${DOCKER_TAG:-latest}"
+PLATFORM="linux/amd64"
 PUSH=false
 
-[ "$1" = "--push" ] && PUSH=true
+for arg in "$@"; do
+  case "$arg" in
+    --push) PUSH=true ;;
+    --arm64) PLATFORM="linux/arm64" ;;
+  esac
+done
 
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -25,8 +31,9 @@ echo -e "${CYAN}  SaaSGuard Docker Build${NC}"
 echo ""
 
 # Build backend
-step "Building backend image..."
+step "Building backend image (${PLATFORM})..."
 docker build \
+  --platform "${PLATFORM}" \
   -t "${REGISTRY}/backend:${TAG}" \
   -f apps/backend/Dockerfile \
   apps/backend
@@ -35,8 +42,9 @@ BACKEND_SIZE=$(docker image inspect "${REGISTRY}/backend:${TAG}" --format='{{.Si
 info "Backend: ${REGISTRY}/backend:${TAG} (${BACKEND_SIZE}MB)"
 
 # Build frontend
-step "Building frontend image..."
+step "Building frontend image (${PLATFORM})..."
 docker build \
+  --platform "${PLATFORM}" \
   -t "${REGISTRY}/frontend:${TAG}" \
   -f apps/frontend/Dockerfile \
   apps/frontend
