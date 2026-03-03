@@ -39,6 +39,6 @@ USER saasguard
 EXPOSE 3006
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3006 || exit 1
+  CMD wget -qO- http://localhost:3006/login || exit 1
 
 CMD ["node", "server.js"]

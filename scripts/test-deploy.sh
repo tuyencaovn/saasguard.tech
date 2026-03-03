@@ -93,6 +93,7 @@ APP_NAME=SaaSGuard
 NEXT_PUBLIC_APP_NAME=SaaSGuard
 NEXT_PUBLIC_API_URL=${API_URL}
 NEXT_PUBLIC_WS_URL=${WS_URL}
+
 FRONTEND_URL=${FRONTEND_URL}
 BIND_HOST=${BIND_HOST}
 API_PORT=${API_PORT:-3005}
@@ -120,6 +121,7 @@ docker build -t saasguard-frontend \
   --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
   --build-arg NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL}" \
   --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME:-SaaSGuard}" \
+
   -f apps/frontend/Dockerfile apps/frontend
 info "Frontend image built"
 
