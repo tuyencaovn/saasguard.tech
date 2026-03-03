@@ -40,6 +40,10 @@ https://monitor.yourdomain.com/*         → frontend
 - 1GB RAM minimum, 2GB recommended
 - Domain mode: ports 80/443 open; IP mode: ports 3005 and 3006 open
 
+### Routing
+
+Root `/` always redirects to `/dashboard` (authenticated) or `/login` (guest). The landing page is served separately on `saasguard.tech`.
+
 ### Post-Install
 
 - Open the dashboard and login with your admin credentials
