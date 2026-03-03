@@ -17,6 +17,8 @@
     "start:stop": "pm2 stop all",
     "start:restart": "pm2 reload all",
     "start:status": "pm2 status",
+    "docker:build": "./scripts/build-docker.sh",
+    "docker:push": "./scripts/build-docker.sh --push",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down"
   },

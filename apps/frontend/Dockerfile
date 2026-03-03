@@ -4,23 +4,32 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
 
-# Stage 2: Build
+# Stage 2: Build Next.js (standalone output)
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# Stage 3: Production
+# Stage 3: Final minimal image (no node_modules needed — standalone bundles everything)
 FROM node:20-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3006
 ENV HOSTNAME=0.0.0.0
 
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
+# Security: non-root user
+RUN addgroup -g 1001 -S saasguard && \
+    adduser -S saasguard -u 1001
 
+COPY --from=build --chown=saasguard:saasguard /app/.next/standalone ./
+COPY --from=build --chown=saasguard:saasguard /app/.next/static ./.next/static
+COPY --from=build --chown=saasguard:saasguard /app/public ./public
+
+USER saasguard
 EXPOSE 3006
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3006 || exit 1
+
 CMD ["node", "server.js"]
