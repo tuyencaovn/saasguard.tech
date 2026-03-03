@@ -92,16 +92,16 @@ export default function PricingPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              href="/login"
+              href="https://github.com/tuyencaovn/saasguard.tech#readme"
               className="text-sm px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-lg transition-all duration-200"
             >
-              Sign in
+              Docs
             </Link>
             <Link
-              href="/login"
+              href="https://github.com/tuyencaovn/saasguard.tech"
               className="text-sm px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg shadow-violet-500/20"
             >
-              Get started free
+              Install Now
             </Link>
           </div>
         </div>
@@ -133,8 +133,8 @@ export default function PricingPage() {
               price="$0"
               description="For indie hackers running a single server."
               features={FREE_FEATURES}
-              cta="Start monitoring free"
-              ctaHref="/login"
+              cta="Install Now — Free"
+              ctaHref="https://github.com/tuyencaovn/saasguard.tech"
             />
             <PricingCard
               name="Pro"
@@ -205,7 +205,7 @@ export default function PricingPage() {
             </div>
             <div className="flex items-center gap-6">
               <Link href="/" className="hover:text-white/50 transition-colors">Home</Link>
-              <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
+              <Link href="https://github.com/tuyencaovn/saasguard.tech" className="hover:text-white/50 transition-colors">GitHub</Link>
               <a href="mailto:support@saasguard.tech" className="hover:text-white/50 transition-colors">Support</a>
             </div>
             <p>&copy; {new Date().getFullYear()} {APP_NAME}</p>
