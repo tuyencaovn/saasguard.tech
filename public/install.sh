@@ -123,6 +123,24 @@ if [ "${NEED_CONFIG:-false}" = "true" ]; then
     BIND_HOST="0.0.0.0"
   fi
 
+  # Port configuration — auto-detect conflicts
+  DEFAULT_API_PORT=3005
+  DEFAULT_DASH_PORT=3006
+  if command -v ss >/dev/null 2>&1; then
+    while ss -tlnp 2>/dev/null | grep -q ":${DEFAULT_API_PORT} "; do DEFAULT_API_PORT=$((DEFAULT_API_PORT + 10)); done
+    while ss -tlnp 2>/dev/null | grep -q ":${DEFAULT_DASH_PORT} "; do DEFAULT_DASH_PORT=$((DEFAULT_DASH_PORT + 10)); done
+  fi
+  read -r -p "  Backend port [${DEFAULT_API_PORT}]: " USER_API_PORT
+  API_PORT="${USER_API_PORT:-$DEFAULT_API_PORT}"
+  read -r -p "  Dashboard port [${DEFAULT_DASH_PORT}]: " USER_DASH_PORT
+  DASH_PORT="${USER_DASH_PORT:-$DEFAULT_DASH_PORT}"
+
+  # Update URLs with actual ports (IP mode shows ports, domain mode hides them)
+  if [ "$DEPLOY_MODE" = "ip" ]; then
+    FRONTEND_URL="http://${SERVER_HOST}:${DASH_PORT}"
+    API_URL="http://${SERVER_HOST}:${API_PORT}"
+  fi
+
   # Telegram (optional)
   read -r -p "  Telegram Bot Token (optional, Enter to skip): " TELEGRAM_TOKEN
   if [ -n "$TELEGRAM_TOKEN" ]; then
@@ -146,6 +164,9 @@ NEXT_PUBLIC_API_URL=${API_URL}
 NEXT_PUBLIC_WS_URL=${API_URL}
 FRONTEND_URL=${FRONTEND_URL}
 BIND_HOST=${BIND_HOST}
+API_PORT=${API_PORT}
+DASH_PORT=${DASH_PORT}
+BACKEND_PORT=${API_PORT}
 EOF
 
   chmod 600 .env
@@ -165,7 +186,9 @@ $COMPOSE_CMD up -d
 # Wait for health
 info "Waiting for services to be ready..."
 RETRIES=30
-until curl -sf "http://localhost:3006" >/dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+DASH_PORT="${DASH_PORT:-3006}"
+API_PORT="${API_PORT:-3005}"
+until curl -sf "http://localhost:${DASH_PORT}" >/dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
   printf "."
   sleep 2
   RETRIES=$((RETRIES - 1))
@@ -193,7 +216,7 @@ server {
     server_name ${DASHBOARD_DOMAIN};
 
     location / {
-        proxy_pass http://127.0.0.1:3006;
+        proxy_pass http://127.0.0.1:${DASH_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -210,7 +233,7 @@ server {
     server_name ${API_DOMAIN};
 
     location / {
-        proxy_pass http://127.0.0.1:3005;
+        proxy_pass http://127.0.0.1:${API_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
