@@ -37,7 +37,7 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       APP_NAME: ${APP_NAME:-SaaSGuard}
     ports:
-      - "3005:3005"
+      - "${BIND_HOST:-0.0.0.0}:3005:3005"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
@@ -59,7 +59,7 @@ services:
       PORT: 3006
       HOSTNAME: 0.0.0.0
     ports:
-      - "3006:3006"
+      - "${BIND_HOST:-0.0.0.0}:3006:3006"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3006/api/health || exit 1"]
       interval: 15s
