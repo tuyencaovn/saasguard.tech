@@ -1,7 +1,7 @@
-# System Architecture - BimNext Monitor
+# System Architecture - SaaSGuard
 
-**Version:** 2.0.0
-**Updated:** 2025-12-24
+**Version:** 2.1.0
+**Updated:** 2026-03-03
 **Architecture Pattern:** Modular Monolith with Event-Driven Scheduling
 
 ---
@@ -567,23 +567,52 @@ User (1) ──── (N) Invitation
 
 ## Deployment Architecture
 
+### Production (Live — monitor.saasguard.tech)
+
+```
+Internet
+    ↓
+Nginx (single domain: monitor.saasguard.tech)
+    ├─ /api/*        → strip prefix → Backend :3005  (HTTP)
+    ├─ /socket.io/*  → Backend :3005  (WebSocket upgrade)
+    └─ /*            → Frontend :3006 (Next.js)
+    ↓
+Docker Compose
+    ├─ postgres      (PostgreSQL :5435)
+    ├─ backend       (NestJS :3005, user: root, pid: host)
+    │   ├─ /var/run/docker.sock  (Docker monitoring)
+    │   ├─ /root/.pm2            (PM2 monitoring via socket)
+    │   └─ /:/hostfs:ro          (Host disk metrics)
+    └─ frontend      (Next.js :3006, built with NEXT_PUBLIC_* baked in)
+```
+
+**Key design decisions:**
+- Single domain, path-based routing — no separate API subdomain
+- Backend runs as `root` in container for Docker socket + PM2 socket + host metrics access
+- `pid: host` gives backend visibility into all host processes
+- `NEXT_PUBLIC_*` vars are Docker build args (baked at build time, not runtime)
+- SSL via Certbot (single domain only)
+- TypeORM `synchronize: true` always — no migrations (self-hosted product)
+- `/health` endpoint is `@Public()` (bypasses JWT) for Docker healthchecks
+
+### IP Mode (No Domain)
+
+```
+Internet
+    ↓
+Frontend :3006  (direct access — no Nginx)
+Backend  :3005  (direct access — no Nginx)
+```
+
+`NEXT_PUBLIC_API_URL=http://IP:3005`, `NEXT_PUBLIC_WS_URL=http://IP:3005`
+
 ### Development
 ```
 Docker Compose:
   - PostgreSQL container
-  - Backend (NestJS) via PM2
-  - Frontend (Next.js) via PM2
+  - Backend (NestJS) via PM2 or ts-node
+  - Frontend (Next.js) dev server
   - Volume mounts for hot reload
-```
-
-### Production (Planned)
-```
-Kubernetes/Docker Swarm:
-  - Backend service (replicated)
-  - Frontend service (CDN)
-  - PostgreSQL service (HA)
-  - Redis service (cache/session)
-  - Ingress/Load balancer
 ```
 
 ---
@@ -600,16 +629,15 @@ Kubernetes/Docker Swarm:
   - Frontend URL
 ```
 
-### Database Migrations
-- TypeORM CLI for schema changes
-- Version-controlled migrations
-- Rollback support
+### Database Schema
+- TypeORM `synchronize: true` always enabled
+- Self-hosted product — schema auto-managed, no manual migrations required
 
 ---
 
 ## Conclusion
 
-The BimNext Monitor architecture follows a modular, event-driven design that prioritizes:
+The SaaSGuard architecture follows a modular, event-driven design that prioritizes:
 1. **Real-time responsiveness** through WebSocket updates
 2. **Scalability** via event-driven processing
 3. **Security** with JWT and role-based access

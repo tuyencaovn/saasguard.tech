@@ -10,21 +10,39 @@ curl -fsSL https://raw.githubusercontent.com/saasguard/saasguard/master/public/i
 
 This will:
 - Check prerequisites (Docker, Docker Compose)
-- Prompt for admin email, password, and optional Telegram config
-- Auto-detect your server IP
-- Start PostgreSQL + Backend + Frontend containers
-- Dashboard available at http://YOUR_IP:3006
+- Prompt for deployment mode (IP or domain), admin credentials, and optional Telegram config
+- Auto-detect server IP and Docker GID
+- Build and start PostgreSQL + Backend + Frontend containers
+- Configure Nginx with path-based routing (domain mode) or direct port access (IP mode)
+- Obtain SSL certificate via Certbot (domain mode)
+
+### Deployment Modes
+
+| Mode | Access | Nginx Routing | SSL |
+|------|--------|--------------|-----|
+| IP mode | `http://IP:3006` (frontend), `http://IP:3005` (API) | None | No |
+| Domain mode | `https://monitor.yourdomain.com` (all traffic) | Path-based (single domain) | Yes (Certbot) |
+
+### Domain Mode — Single-Domain Routing
+
+All traffic uses one domain with Nginx path-based routing (no separate API subdomain):
+
+```
+https://monitor.yourdomain.com/api/*     → backend (prefix stripped)
+https://monitor.yourdomain.com/socket.io/* → WebSocket backend
+https://monitor.yourdomain.com/*         → frontend
+```
 
 ### Requirements
 
 - Ubuntu 20.04+ / Debian 11+ / CentOS 8+
 - Docker & Docker Compose
 - 1GB RAM minimum, 2GB recommended
-- Ports 3005 (API) and 3006 (Dashboard)
+- Domain mode: ports 80/443 open; IP mode: ports 3005 and 3006 open
 
 ### Post-Install
 
-- Open http://YOUR_IP:3006 and login with your admin email/password
+- Open the dashboard and login with your admin credentials
 - Configure alerts in Settings → Alerts
 - Add SSL domains in SSL Certificates
 - Optional: Set up Telegram notifications
@@ -41,8 +59,21 @@ docker compose logs -f
 docker compose down
 
 # Update
-docker compose pull && docker compose up -d
+git pull && bash scripts/test-deploy.sh   # source build
+# or
+docker compose pull && docker compose up -d  # image-based
 ```
+
+---
+
+## Install Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `public/install.sh` | Production one-liner install |
+| `scripts/test-deploy.sh` | Source-build deploy (dev/staging) |
+
+Both scripts collect all configuration **before** the Docker build, because `NEXT_PUBLIC_*` frontend vars are baked into the image at build time.
 
 ---
 
@@ -50,7 +81,7 @@ docker compose pull && docker compose up -d
 
 ### Prerequisites
 
-- Node.js >= 20.x (use NVM if needed)
+- Node.js >= 20.x (use NVM)
 - PM2 (`npm install -g pm2`)
 - Docker & Docker Compose (for PostgreSQL)
 
@@ -104,13 +135,26 @@ TELEGRAM_CHAT_ID=
 ```
 
 **Frontend** (`apps/frontend/.env`):
+
+Domain mode (single domain, path-based routing):
 ```env
 PORT=3006
 NEXT_PUBLIC_APP_NAME=SaaSGuard
 NEXT_PUBLIC_APP_SHORT_NAME=SaaSGuard
-NEXT_PUBLIC_API_URL=https://api.monitor.yourdomain.com
-NEXT_PUBLIC_WS_URL=https://api.monitor.yourdomain.com
+NEXT_PUBLIC_API_URL=https://monitor.yourdomain.com/api
+NEXT_PUBLIC_WS_URL=https://monitor.yourdomain.com
 ```
+
+IP mode:
+```env
+PORT=3006
+NEXT_PUBLIC_APP_NAME=SaaSGuard
+NEXT_PUBLIC_APP_SHORT_NAME=SaaSGuard
+NEXT_PUBLIC_API_URL=http://YOUR_IP:3005
+NEXT_PUBLIC_WS_URL=http://YOUR_IP:3005
+```
+
+> **Note:** `NEXT_PUBLIC_*` vars are baked into the Next.js build. In Docker deployments they are passed as build args, not runtime env vars.
 
 ### 5. Build & Seed
 
@@ -165,28 +209,38 @@ pm2 delete all && pm2 start ecosystem.config.prod.js
 
 ## Reverse Proxy (Nginx)
 
+### Domain Mode — Single Domain (Recommended)
+
+All frontend, API, and WebSocket traffic on one domain using path-based routing:
+
 ```nginx
-# Backend API
 server {
     listen 80;
-    server_name api.monitor.yourdomain.com;
-    location / {
+    server_name monitor.yourdomain.com;
+
+    # API — strip /api prefix before proxying to backend
+    location /api/ {
+        rewrite ^/api/(.*) /$1 break;
         proxy_pass http://localhost:3005;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # WebSocket
+    location /socket.io/ {
+        proxy_pass http://localhost:3005;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_cache_bypass $http_upgrade;
     }
-}
 
-# Frontend
-server {
-    listen 80;
-    server_name monitor.yourdomain.com;
+    # Frontend — catch-all
     location / {
         proxy_pass http://localhost:3006;
         proxy_http_version 1.1;
@@ -208,8 +262,60 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d monitor.yourdomain.com -d api.monitor.yourdomain.com
+# Domain mode — single domain only
+sudo certbot --nginx -d monitor.yourdomain.com
 ```
+
+---
+
+## Docker Container Details
+
+### Backend Container
+
+The backend container runs as `root` to access:
+- Docker socket (`/var/run/docker.sock`) for container monitoring
+- PM2 daemon socket (`/root/.pm2` mounted from host) for process monitoring
+- Host filesystem (`/:/hostfs:ro`) for accurate disk metrics
+- Host PID namespace (`pid: host`) for process visibility
+
+```yaml
+# docker-compose.yml (backend service excerpt)
+backend:
+  user: root
+  pid: host
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /root/.pm2:/root/.pm2
+    - /:/hostfs:ro
+```
+
+### Frontend Container
+
+`NEXT_PUBLIC_*` environment variables are passed as Docker build args — they are baked into the Next.js static bundle at build time, not injected at runtime:
+
+```yaml
+frontend:
+  build:
+    args:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+      - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+      - NEXT_PUBLIC_APP_SHORT_NAME=${NEXT_PUBLIC_APP_SHORT_NAME}
+```
+
+### Health Check
+
+The backend exposes `/health` as a public endpoint (no JWT required) for Docker healthchecks:
+
+```
+GET /health → 200 OK  (no auth needed)
+```
+
+---
+
+## Database
+
+TypeORM `synchronize: true` is always enabled. SaaSGuard is a self-hosted product; schema is auto-managed — no manual migrations required.
 
 ---
 
@@ -233,12 +339,12 @@ sudo certbot --nginx -d monitor.yourdomain.com -d api.monitor.yourdomain.com
 | `FRONTEND_URL` | Yes | - | Frontend URL for emails |
 | `ADMIN_EMAIL` | No | - | Fallback alert email |
 
-### Frontend (.env)
+### Frontend (.env / build args)
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | 3006 | Frontend port |
-| `NEXT_PUBLIC_APP_NAME` | No | SaaSGuard | Full app name (title, UI) |
-| `NEXT_PUBLIC_APP_SHORT_NAME` | No | SaaSGuard | Short brand name (sidebar) |
-| `NEXT_PUBLIC_API_URL` | Yes | - | Backend API URL |
-| `NEXT_PUBLIC_WS_URL` | Yes | - | WebSocket URL (same as API) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | No | Frontend port (default 3006) |
+| `NEXT_PUBLIC_APP_NAME` | No | Full app name (title, UI) |
+| `NEXT_PUBLIC_APP_SHORT_NAME` | No | Short brand name (sidebar) |
+| `NEXT_PUBLIC_API_URL` | Yes | Domain mode: `https://domain.com/api` · IP mode: `http://IP:3005` |
+| `NEXT_PUBLIC_WS_URL` | Yes | Domain mode: `https://domain.com` · IP mode: `http://IP:3005` |
