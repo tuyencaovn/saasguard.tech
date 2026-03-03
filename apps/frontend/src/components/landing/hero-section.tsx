@@ -44,10 +44,10 @@ export function HeroSection() {
         {/* CTAs */}
         <div className="reveal-up reveal-delay-3 flex flex-col sm:flex-row gap-4 justify-center items-center mb-14">
           <Link
-            href="/login"
+            href="https://github.com/tuyencaovn/saasguard.tech"
             className="group inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5"
           >
-            Start Free Monitoring
+            Install Now
             <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
