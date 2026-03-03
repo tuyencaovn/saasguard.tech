@@ -37,7 +37,7 @@ export class NotificationSettingsService implements OnModuleInit {
         type: NotificationType.EMAIL,
         enabled: !!smtpHost,
         smtpHost: smtpHost || undefined,
-        smtpPort: this.configService.get<number>('SMTP_PORT', 587),
+        smtpPort: parseInt(this.configService.get<string>('SMTP_PORT', ''), 10) || 587,
         smtpUser: this.configService.get<string>('SMTP_USER') || undefined,
         smtpPass: this.configService.get<string>('SMTP_PASS') || undefined,
         smtpFromName: this.configService.get<string>('SMTP_FROM_NAME', this.appName),

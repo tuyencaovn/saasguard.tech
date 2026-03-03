@@ -1,20 +1,21 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: bimnext_postgres
+    container_name: saasguard_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: monitor
-      POSTGRES_PASSWORD: M0n!t0r_D3v@2025
-      POSTGRES_DB: bimnext_monitor
+      POSTGRES_DB: saasguard_dev
+      POSTGRES_USER: saasguard
+      POSTGRES_PASSWORD: saasguard_dev_2025
     ports:
       - "5435:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U monitor -d bimnext_monitor"]
+      test: ["CMD-SHELL", "pg_isready -U saasguard"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
 
 volumes:
-  postgres_data:
+  pg_data:

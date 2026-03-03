@@ -48,10 +48,10 @@ export class SslMonitor {
   @Column({ nullable: true, type: 'timestamp' })
   lastChecked: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   issuer: string | null;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'varchar' })
   errorMessage: string | null;
 
   @CreateDateColumn()
