@@ -29,30 +29,12 @@ command -v docker >/dev/null 2>&1 || error "Docker required: curl -fsSL https://
 docker compose version >/dev/null 2>&1 || error "Docker Compose required"
 info "Docker ready"
 
-# ── Build images ───────────────────────────────────────────────────────────
-step "Building backend image (this may take a few minutes)..."
-docker build -t saasguard-backend -f apps/backend/Dockerfile apps/backend
-info "Backend image built"
-
-step "Building frontend image..."
-docker build -t saasguard-frontend -f apps/frontend/Dockerfile apps/frontend
-info "Frontend image built"
-
 # ── Prepare deploy directory ───────────────────────────────────────────────
 DEPLOY_DIR="${HOME}/saasguard"
 mkdir -p "$DEPLOY_DIR"
 
-# Copy and patch docker-compose to use local images
-sed \
-  -e 's|ghcr.io/tuyencaovn/saasguard.tech/backend:latest|saasguard-backend|' \
-  -e 's|ghcr.io/tuyencaovn/saasguard.tech/frontend:latest|saasguard-frontend|' \
-  public/docker-compose.prod.yml > "$DEPLOY_DIR/docker-compose.yml"
-info "docker-compose.yml prepared"
-
-cd "$DEPLOY_DIR"
-
-# ── Configuration ──────────────────────────────────────────────────────────
-if [ ! -f ".env" ]; then
+# ── Configuration (BEFORE build — frontend needs API URL at build time) ──
+if [ ! -f "$DEPLOY_DIR/.env" ]; then
   step "Configuring..."
 
   read -r -p "  Admin email: " ADMIN_EMAIL
@@ -97,7 +79,7 @@ if [ ! -f ".env" ]; then
   read -r -p "  Telegram Bot Token (optional): " TELEGRAM_TOKEN
   [ -n "$TELEGRAM_TOKEN" ] && read -r -p "  Telegram Chat ID: " TELEGRAM_CHAT_ID
 
-  cat > .env <<EOF
+  cat > "$DEPLOY_DIR/.env" <<EOF
 NODE_ENV=production
 DEPLOY_MODE=${DEPLOY_MODE}
 DASHBOARD_DOMAIN=${DASHBOARD_DOMAIN}
@@ -119,12 +101,37 @@ DASH_PORT=${DASH_PORT:-3006}
 BACKEND_PORT=${API_PORT:-3005}
 DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 999)
 EOF
-  chmod 600 .env
+  chmod 600 "$DEPLOY_DIR/.env"
   info ".env created"
 else
   warn ".env exists — reusing"
-  set -a; source .env 2>/dev/null; set +a
+  set -a; source "$DEPLOY_DIR/.env" 2>/dev/null; set +a
 fi
+
+# Read API URL from .env for build args
+set -a; source "$DEPLOY_DIR/.env" 2>/dev/null; set +a
+
+# ── Build images ───────────────────────────────────────────────────────────
+step "Building backend image (this may take a few minutes)..."
+docker build -t saasguard-backend -f apps/backend/Dockerfile apps/backend
+info "Backend image built"
+
+step "Building frontend image..."
+docker build -t saasguard-frontend \
+  --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+  --build-arg NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL}" \
+  --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME:-SaaSGuard}" \
+  -f apps/frontend/Dockerfile apps/frontend
+info "Frontend image built"
+
+# Copy and patch docker-compose to use local images
+sed \
+  -e 's|ghcr.io/tuyencaovn/saasguard.tech/backend:latest|saasguard-backend|' \
+  -e 's|ghcr.io/tuyencaovn/saasguard.tech/frontend:latest|saasguard-frontend|' \
+  public/docker-compose.prod.yml > "$DEPLOY_DIR/docker-compose.yml"
+info "docker-compose.yml prepared"
+
+cd "$DEPLOY_DIR"
 
 # ── Start services ─────────────────────────────────────────────────────────
 step "Starting services..."
