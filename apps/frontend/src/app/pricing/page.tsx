@@ -127,7 +127,7 @@ export default function PricingPage() {
 
         {/* Pricing cards */}
         <section className="pb-16 px-4">
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             <PricingCard
               name="Free"
               price="$0"
