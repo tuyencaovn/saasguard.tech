@@ -45,10 +45,13 @@ export class MetricsService {
       };
 
       // Filter main disk partitions (exclude small/system partitions)
+      // In Docker with host rootfs mounted at /hostfs, prefer that over overlay
+      const hasHostFs = disk.some((d) => d.mount === '/hostfs');
       const diskMetrics: DiskMetrics[] = disk
         .filter((d) => d.size > 1024 * 1024 * 1024) // > 1GB
+        .filter((d) => hasHostFs ? d.mount.startsWith('/hostfs') : !d.mount.startsWith('/dev'))
         .map((d) => ({
-          mount: d.mount,
+          mount: hasHostFs ? d.mount.replace('/hostfs', '') || '/' : d.mount,
           fs: d.fs,
           size: d.size,
           used: d.used,

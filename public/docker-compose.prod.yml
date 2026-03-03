@@ -39,8 +39,10 @@ services:
       APP_NAME: ${APP_NAME:-SaaSGuard}
     ports:
       - "${BIND_HOST:-0.0.0.0}:${API_PORT:-3005}:3005"
+    pid: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/hostfs:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3005/health || exit 1"]
       interval: 15s
