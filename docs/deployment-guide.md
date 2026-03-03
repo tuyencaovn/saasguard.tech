@@ -44,6 +44,8 @@ https://monitor.yourdomain.com/*         → frontend
 
 Root `/` always redirects to `/dashboard` (authenticated) or `/login` (guest). The landing page is served separately on `saasguard.tech`.
 
+**Public Docs Page:** A public `/docs` page is available on the marketing frontend at `https://yourdomain.com/docs` with Quick Start, Setup Guide, Telegram Bot Setup, Usage Guide, and FAQ/Troubleshooting sections.
+
 ### Post-Install
 
 - Open the dashboard and login with your admin credentials

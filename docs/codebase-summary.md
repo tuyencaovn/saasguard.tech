@@ -47,6 +47,7 @@ bimnext_monitor/
 │       │   │   ├── pm2/page.tsx
 │       │   │   ├── users/page.tsx
 │       │   │   ├── settings/page.tsx
+│       │   │   ├── docs/page.tsx      # Public docs (Quick Start, Setup, FAQ)
 │       │   │   ├── login/page.tsx
 │       │   │   └── ...auth pages
 │       │   ├── components/      # Reusable React components
