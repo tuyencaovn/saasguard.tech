@@ -54,10 +54,8 @@ if [ ! -f "$DEPLOY_DIR/.env" ]; then
   if [ "$ACCESS_MODE" = "1" ]; then
     read -r -p "  Dashboard domain: " DASHBOARD_DOMAIN
     [ -z "$DASHBOARD_DOMAIN" ] && error "Domain required"
-    API_DOMAIN="api-${DASHBOARD_DOMAIN}"
-    info "API domain: ${API_DOMAIN}"
     FRONTEND_URL="https://${DASHBOARD_DOMAIN}"
-    API_URL="https://${API_DOMAIN}"
+    API_URL="https://${DASHBOARD_DOMAIN}/api"
     BIND_HOST="127.0.0.1"
     DEPLOY_MODE="domain"
   else
@@ -79,11 +77,12 @@ if [ ! -f "$DEPLOY_DIR/.env" ]; then
   read -r -p "  Telegram Bot Token (optional): " TELEGRAM_TOKEN
   [ -n "$TELEGRAM_TOKEN" ] && read -r -p "  Telegram Chat ID: " TELEGRAM_CHAT_ID
 
+  WS_URL="https://${DASHBOARD_DOMAIN}"
+  [ "$DEPLOY_MODE" = "ip" ] && WS_URL="http://${SERVER_HOST}:${API_PORT:-3005}"
   cat > "$DEPLOY_DIR/.env" <<EOF
 NODE_ENV=production
 DEPLOY_MODE=${DEPLOY_MODE}
 DASHBOARD_DOMAIN=${DASHBOARD_DOMAIN}
-API_DOMAIN=${API_DOMAIN}
 JWT_SECRET=$(openssl rand -hex 32)
 DATABASE_PASSWORD=$(openssl rand -hex 16)
 ADMIN_EMAIL=${ADMIN_EMAIL}
@@ -93,7 +92,7 @@ TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 APP_NAME=SaaSGuard
 NEXT_PUBLIC_APP_NAME=SaaSGuard
 NEXT_PUBLIC_API_URL=${API_URL}
-NEXT_PUBLIC_WS_URL=${API_URL}
+NEXT_PUBLIC_WS_URL=${WS_URL}
 FRONTEND_URL=${FRONTEND_URL}
 BIND_HOST=${BIND_HOST}
 API_PORT=${API_PORT:-3005}
@@ -160,8 +159,20 @@ if [ "${DEPLOY_MODE}" = "domain" ]; then
 server {
     listen 80;
     server_name ${DASHBOARD_DOMAIN};
-    location / {
-        proxy_pass http://127.0.0.1:${DASH_PORT};
+
+    # API requests — strip /api prefix, proxy to backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:${API_PORT}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # WebSocket
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:${API_PORT}/socket.io/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -170,12 +181,10 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
-}
-server {
-    listen 80;
-    server_name ${API_DOMAIN};
+
+    # Frontend (default)
     location / {
-        proxy_pass http://127.0.0.1:${API_PORT};
+        proxy_pass http://127.0.0.1:${DASH_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -193,9 +202,9 @@ NGINX
   if ! command -v certbot >/dev/null 2>&1; then
     apt-get install -y -qq certbot python3-certbot-nginx >/dev/null 2>&1
   fi
-  certbot --nginx -d "${DASHBOARD_DOMAIN}" -d "${API_DOMAIN}" \
+  certbot --nginx -d "${DASHBOARD_DOMAIN}" \
     --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect 2>&1 | tail -3 \
-    || warn "Certbot failed — run manually: certbot --nginx -d ${DASHBOARD_DOMAIN} -d ${API_DOMAIN}"
+    || warn "Certbot failed — run manually: certbot --nginx -d ${DASHBOARD_DOMAIN}"
 fi
 
 # ── Summary ────────────────────────────────────────────────────────────────
@@ -204,7 +213,7 @@ echo -e "  ${GREEN}✓ SaaSGuard deployed!${NC}"
 echo ""
 if [ "${DEPLOY_MODE}" = "domain" ]; then
   echo "  Dashboard: https://${DASHBOARD_DOMAIN}"
-  echo "  API:       https://${API_DOMAIN}"
+  echo "  API:       https://${DASHBOARD_DOMAIN}/api"
 else
   echo "  Dashboard: ${FRONTEND_URL}"
   echo "  API:       ${API_URL}"

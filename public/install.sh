@@ -102,14 +102,10 @@ if [ "${NEED_CONFIG:-false}" = "true" ]; then
     read -r -p "  Dashboard domain (e.g. monitor.myapp.com): " DASHBOARD_DOMAIN
     [ -z "$DASHBOARD_DOMAIN" ] && error "Domain is required"
 
-    # Auto-derive API domain: monitor.abc.com → api-monitor.abc.com
-    API_DOMAIN="api-${DASHBOARD_DOMAIN}"
-    info "API domain: ${API_DOMAIN} (auto-generated)"
-
     DEPLOY_MODE="domain"
     PROTOCOL="https"
     FRONTEND_URL="${PROTOCOL}://${DASHBOARD_DOMAIN}"
-    API_URL="${PROTOCOL}://${API_DOMAIN}"
+    API_URL="${PROTOCOL}://${DASHBOARD_DOMAIN}/api"
     BIND_HOST="127.0.0.1"
   else
     # IP mode
@@ -147,11 +143,12 @@ if [ "${NEED_CONFIG:-false}" = "true" ]; then
   echo "─────────────────────────────────────────────────────────────"
 
   # Write .env
+  WS_URL="${PROTOCOL:-http}://${DASHBOARD_DOMAIN:-${SERVER_HOST}:${DASH_PORT}}"
+  [ "$DEPLOY_MODE" = "ip" ] && WS_URL="http://${SERVER_HOST}:${API_PORT}"
   cat > .env <<EOF
 NODE_ENV=production
 DEPLOY_MODE=${DEPLOY_MODE}
 DASHBOARD_DOMAIN=${DASHBOARD_DOMAIN}
-API_DOMAIN=${API_DOMAIN}
 JWT_SECRET=${JWT_SECRET}
 DATABASE_PASSWORD=${DB_PASSWORD}
 ADMIN_EMAIL=${ADMIN_EMAIL}
@@ -161,7 +158,7 @@ TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 APP_NAME=SaaSGuard
 NEXT_PUBLIC_APP_NAME=SaaSGuard
 NEXT_PUBLIC_API_URL=${API_URL}
-NEXT_PUBLIC_WS_URL=${API_URL}
+NEXT_PUBLIC_WS_URL=${WS_URL}
 FRONTEND_URL=${FRONTEND_URL}
 BIND_HOST=${BIND_HOST}
 API_PORT=${API_PORT}
@@ -216,6 +213,29 @@ server {
     listen 80;
     server_name ${DASHBOARD_DOMAIN};
 
+    # API requests — strip /api prefix, proxy to backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:${API_PORT}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # WebSocket
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:${API_PORT}/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Frontend (default)
     location / {
         proxy_pass http://127.0.0.1:${DASH_PORT};
         proxy_http_version 1.1;
@@ -225,24 +245,6 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-
-server {
-    listen 80;
-    server_name ${API_DOMAIN};
-
-    location / {
-        proxy_pass http://127.0.0.1:${API_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
     }
 }
 NGINX
@@ -253,7 +255,7 @@ NGINX
   rm -f /etc/nginx/sites-enabled/default
 
   nginx -t 2>/dev/null && systemctl reload nginx
-  info "Nginx configured for ${DASHBOARD_DOMAIN} + ${API_DOMAIN}"
+  info "Nginx configured for ${DASHBOARD_DOMAIN}"
 
   # SSL with Certbot
   step "Setting up SSL certificates..."
@@ -264,7 +266,7 @@ NGINX
 
   if command -v certbot >/dev/null 2>&1; then
     info "Requesting SSL certificates (this may take a moment)..."
-    certbot --nginx -d "${DASHBOARD_DOMAIN}" -d "${API_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect 2>&1 | tail -3 || warn "Certbot failed. Ensure DNS points to this server and run: certbot --nginx -d ${DASHBOARD_DOMAIN} -d ${API_DOMAIN}"
+    certbot --nginx -d "${DASHBOARD_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect 2>&1 | tail -3 || warn "Certbot failed. Ensure DNS points to this server and run: certbot --nginx -d ${DASHBOARD_DOMAIN}"
   fi
 fi
 
@@ -276,7 +278,7 @@ echo ""
 
 if [ "${DEPLOY_MODE}" = "domain" ]; then
   echo "  Dashboard: https://${DASHBOARD_DOMAIN}"
-  echo "  API:       https://${API_DOMAIN}"
+  echo "  API:       https://${DASHBOARD_DOMAIN}/api"
 else
   DISPLAY_HOST="${SERVER_HOST:-$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost')}"
   echo "  Dashboard: http://${DISPLAY_HOST}:3006"
@@ -293,8 +295,7 @@ echo "    ${COMPOSE_CMD} pull && ${COMPOSE_CMD} up -d         # update"
 echo ""
 
 if [ "${DEPLOY_MODE}" = "domain" ]; then
-  echo "  DNS required: Point these records to this server's IP"
+  echo "  DNS required: Point this record to this server's IP"
   echo "    ${DASHBOARD_DOMAIN}  → A record"
-  echo "    ${API_DOMAIN}  → A record"
   echo ""
 fi
