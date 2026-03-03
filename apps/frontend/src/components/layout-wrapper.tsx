@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/sidebar';
 import { AuthGuard } from '@/components/auth-guard';
 import { Menu } from 'lucide-react';
 
-const NO_SIDEBAR_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password', '/pricing'];
+const NO_SIDEBAR_PATHS = ['/login', '/set-password', '/forgot-password', '/reset-password', '/pricing', '/docs'];
 const NO_SIDEBAR_EXACT = ['/'];
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {

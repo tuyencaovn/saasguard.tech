@@ -35,7 +35,7 @@ export default function LandingPage() {
               Pricing
             </Link>
             <Link
-              href="https://github.com/tuyencaovn/saasguard.tech#readme"
+              href="/docs"
               className="text-sm px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-lg transition-all duration-200"
             >
               Docs
@@ -69,6 +69,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-6">
               <Link href="/pricing" className="hover:text-white/50 transition-colors">Pricing</Link>
+              <Link href="/docs" className="hover:text-white/50 transition-colors">Docs</Link>
               <Link href="https://github.com/tuyencaovn/saasguard.tech" className="hover:text-white/50 transition-colors">GitHub</Link>
             </div>
             <p>&copy; {new Date().getFullYear()} {APP_NAME}</p>

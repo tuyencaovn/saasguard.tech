@@ -92,7 +92,7 @@ export default function PricingPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link
-              href="https://github.com/tuyencaovn/saasguard.tech#readme"
+              href="/docs"
               className="text-sm px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-lg transition-all duration-200"
             >
               Docs
@@ -205,6 +205,7 @@ export default function PricingPage() {
             </div>
             <div className="flex items-center gap-6">
               <Link href="/" className="hover:text-white/50 transition-colors">Home</Link>
+              <Link href="/docs" className="hover:text-white/50 transition-colors">Docs</Link>
               <Link href="https://github.com/tuyencaovn/saasguard.tech" className="hover:text-white/50 transition-colors">GitHub</Link>
               <a href="mailto:tuyencaovn@gmail.com" className="hover:text-white/50 transition-colors">Support</a>
             </div>
