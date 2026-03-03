@@ -100,6 +100,8 @@ if [ ! -f ".env" ]; then
   cat > .env <<EOF
 NODE_ENV=production
 DEPLOY_MODE=${DEPLOY_MODE}
+DASHBOARD_DOMAIN=${DASHBOARD_DOMAIN}
+API_DOMAIN=${API_DOMAIN}
 JWT_SECRET=$(openssl rand -hex 32)
 DATABASE_PASSWORD=$(openssl rand -hex 16)
 ADMIN_EMAIL=${ADMIN_EMAIL}
