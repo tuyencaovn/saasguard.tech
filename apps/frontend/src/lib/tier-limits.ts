@@ -19,4 +19,4 @@ export const TIER_LIMITS = {
 
 export const PRO_PRICE = 19; // USD/mo
 
-export const PRO_STRIPE_LINK = 'mailto:support@saasguard.tech?subject=Pro%20Upgrade';
+export const PRO_STRIPE_LINK = 'mailto:tuyencaovn@gmail.com?subject=Pro%20Upgrade';

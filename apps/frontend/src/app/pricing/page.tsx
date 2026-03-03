@@ -206,7 +206,7 @@ export default function PricingPage() {
             <div className="flex items-center gap-6">
               <Link href="/" className="hover:text-white/50 transition-colors">Home</Link>
               <Link href="https://github.com/tuyencaovn/saasguard.tech" className="hover:text-white/50 transition-colors">GitHub</Link>
-              <a href="mailto:support@saasguard.tech" className="hover:text-white/50 transition-colors">Support</a>
+              <a href="mailto:tuyencaovn@gmail.com" className="hover:text-white/50 transition-colors">Support</a>
             </div>
             <p>&copy; {new Date().getFullYear()} {APP_NAME}</p>
           </div>
