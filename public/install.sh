@@ -123,17 +123,15 @@ if [ "${NEED_CONFIG:-false}" = "true" ]; then
     BIND_HOST="0.0.0.0"
   fi
 
-  # Port configuration — auto-detect conflicts
-  DEFAULT_API_PORT=3005
-  DEFAULT_DASH_PORT=3006
+  # Auto-detect available ports (no user input needed)
+  API_PORT=3005
+  DASH_PORT=3006
   if command -v ss >/dev/null 2>&1; then
-    while ss -tlnp 2>/dev/null | grep -q ":${DEFAULT_API_PORT} "; do DEFAULT_API_PORT=$((DEFAULT_API_PORT + 10)); done
-    while ss -tlnp 2>/dev/null | grep -q ":${DEFAULT_DASH_PORT} "; do DEFAULT_DASH_PORT=$((DEFAULT_DASH_PORT + 10)); done
+    while ss -tlnp 2>/dev/null | grep -q ":${API_PORT} "; do API_PORT=$((API_PORT + 10)); done
+    while ss -tlnp 2>/dev/null | grep -q ":${DASH_PORT} "; do DASH_PORT=$((DASH_PORT + 10)); done
   fi
-  read -r -p "  Backend port [${DEFAULT_API_PORT}]: " USER_API_PORT
-  API_PORT="${USER_API_PORT:-$DEFAULT_API_PORT}"
-  read -r -p "  Dashboard port [${DEFAULT_DASH_PORT}]: " USER_DASH_PORT
-  DASH_PORT="${USER_DASH_PORT:-$DEFAULT_DASH_PORT}"
+  [ "$API_PORT" != "3005" ] && info "Port 3005 in use — using ${API_PORT} for API"
+  [ "$DASH_PORT" != "3006" ] && info "Port 3006 in use — using ${DASH_PORT} for dashboard"
 
   # Update URLs with actual ports (IP mode shows ports, domain mode hides them)
   if [ "$DEPLOY_MODE" = "ip" ]; then
