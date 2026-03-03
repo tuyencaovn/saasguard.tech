@@ -76,8 +76,21 @@ docker compose pull && docker compose up -d  # image-based
 |--------|---------|
 | `public/install.sh` | Production one-liner install |
 | `scripts/test-deploy.sh` | Source-build deploy (dev/staging) |
+| `scripts/deploy-marketing.sh` | Marketing site deploy (landing page only) |
 
 Both scripts collect all configuration **before** the Docker build, because `NEXT_PUBLIC_*` frontend vars are baked into the image at build time.
+
+### Marketing Site (Landing Page)
+
+The marketing site runs separately from the self-hosted app. It uses `NEXT_PUBLIC_MARKETING=true` to show the landing page instead of redirecting to login.
+
+```bash
+./scripts/deploy-marketing.sh saasguard.tech
+```
+
+This will build the frontend with marketing mode, run it on port 3007, configure Nginx, and setup SSL with Certbot.
+
+CTA buttons link to GitHub repo for installation. Support email: configurable in `apps/frontend/src/lib/tier-limits.ts`.
 
 ---
 
@@ -352,3 +365,4 @@ TypeORM `synchronize: true` is always enabled. SaaSGuard is a self-hosted produc
 | `NEXT_PUBLIC_APP_SHORT_NAME` | No | Short brand name (sidebar) |
 | `NEXT_PUBLIC_API_URL` | Yes | Domain mode: `https://domain.com/api` · IP mode: `http://IP:3005` |
 | `NEXT_PUBLIC_WS_URL` | Yes | Domain mode: `https://domain.com` · IP mode: `http://IP:3005` |
+| `NEXT_PUBLIC_MARKETING` | No | Set `true` for marketing site (shows landing page instead of redirect) |
