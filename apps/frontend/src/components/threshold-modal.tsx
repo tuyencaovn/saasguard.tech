@@ -110,7 +110,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg mx-4 glass-card rounded-2xl overflow-hidden">
+      <div className="relative w-full max-w-lg mx-4 max-h-[90vh] glass-card rounded-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -131,7 +131,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
           {error && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               {error}
