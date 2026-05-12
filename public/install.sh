@@ -6,6 +6,11 @@
 
 set -e
 
+# Allow `curl | bash` usage — reattach stdin to terminal so `read` works
+if [ ! -t 0 ] && [ -r /dev/tty ]; then
+  exec </dev/tty
+fi
+
 INSTALL_DIR="${INSTALL_DIR:-$(pwd)}"
 COMPOSE_URL="https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/public/docker-compose.prod.yml"
 
