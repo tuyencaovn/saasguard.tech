@@ -6,7 +6,7 @@
 
 set -e
 
-INSTALL_DIR="${HOME}/saasguard"
+INSTALL_DIR="${INSTALL_DIR:-$(pwd)}"
 COMPOSE_URL="https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/public/docker-compose.prod.yml"
 
 # Colors
