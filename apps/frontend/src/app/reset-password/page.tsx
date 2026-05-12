@@ -23,7 +23,7 @@ import {
 
 import { APP_SHORT_NAME } from '@/config/brand';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // Docker icon SVG
 const DockerIcon = () => (

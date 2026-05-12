@@ -35,7 +35,7 @@ import { LogsModal } from '@/components/logs-modal';
 import { CrashIndicator } from '@/components/crash-indicator';
 import { useCrashStatus } from '@/hooks/use-crash-status';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'running' | 'stopped' | 'error';

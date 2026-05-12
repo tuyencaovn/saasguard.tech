@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, RefreshCw, Download, Loader2 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface LogsModalProps {
   containerId: string;

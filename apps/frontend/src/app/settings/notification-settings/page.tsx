@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/config/brand';
 import { UpgradePrompt } from '@/components/upgrade-prompt';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface EmailSettings {
   id?: string;

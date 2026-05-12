@@ -53,7 +53,7 @@ function formatNetworkSpeed(bytesPerSec: number): string {
 // Fetch metrics history from API
 async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/metrics/history?minutes=${minutes}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/metrics/history?minutes=${minutes}`);
     if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
     const data = await res.json();
     const metrics = data.map((item: { timestamp: string; cpuPercent: number; ramPercent: number; diskPercent: number }) => ({

@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { CrashIndicator } from '@/components/crash-indicator';
 import { useCrashStatus } from '@/hooks/use-crash-status';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 type StatusFilter = 'all' | 'online' | 'stopped' | 'errored';
 type ViewMode = 'grid' | 'list';

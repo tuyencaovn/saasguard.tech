@@ -10,7 +10,7 @@ import { UpgradePrompt } from '@/components/upgrade-prompt';
 import { TIER_LIMITS } from '@/lib/tier-limits';
 import { useAuth } from '@/contexts/auth-context';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface SslMonitor {
   id: string;

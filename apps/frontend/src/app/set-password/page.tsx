@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Server, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { APP_NAME } from '@/config/brand';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export default function SetPasswordPage() {
   const router = useRouter();
