@@ -367,18 +367,27 @@ setup_nginx() {
   NGINX_CONF="/etc/nginx/sites-available/saasguard"
   NGINX_ENABLED="/etc/nginx/sites-enabled/saasguard"
 
-  # Detect other enabled sites already serving this domain (old/manual configs).
-  # Two server blocks for the same server_name make Nginx pick the wrong one.
+  # Remove any other config that already serves THIS domain — it is being
+  # replaced by the saasguard config, so leaving it (old cert, stale 443 block)
+  # only causes duplicate server_name conflicts. Scan both sites-enabled and
+  # sites-available, and delete the symlink + the real file it points to.
   local conflicts
-  conflicts=$(sudo grep -RlE "server_name[^;]*\b${DOMAIN}\b" /etc/nginx/sites-enabled/ 2>/dev/null | grep -v '/saasguard$' || true)
+  conflicts=$(sudo grep -RlE "server_name[^;]*\b${DOMAIN}\b" \
+    /etc/nginx/sites-enabled/ /etc/nginx/sites-available/ 2>/dev/null \
+    | grep -vE '/saasguard$' | sort -u || true)
   if [ -n "$conflicts" ]; then
-    warn "Other Nginx sites already serve ${DOMAIN} (will conflict):"
+    warn "Other Nginx configs serve ${DOMAIN} and will be removed (replaced by this install):"
     echo "$conflicts" | sed 's/^/      /'
     local ans
-    ans=$(ask "Disable these conflicting sites?" "y")
+    ans=$(ask "Remove these conflicting configs?" "y")
     if [ "$ans" = y ] || [ "$ans" = Y ]; then
       while IFS= read -r f; do
-        [ -n "$f" ] && sudo rm -f "$f" && info "Disabled $f"
+        [ -z "$f" ] && continue
+        local target
+        target=$(readlink -f "$f" 2>/dev/null || echo "$f")
+        sudo rm -f "$f"                                   # symlink or file in the scanned dir
+        [ -n "$target" ] && [ "$target" != "$f" ] && sudo rm -f "$target"  # real file it points to
+        info "Removed $f"
       done <<< "$conflicts"
     else
       warn "Left in place — they may shadow this config and cause wrong routing"
