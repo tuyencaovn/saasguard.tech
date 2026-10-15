@@ -69,4 +69,24 @@ export class MetricsScheduler {
       this.logger.error('Failed to cleanup metrics history', error);
     }
   }
+
+  /**
+   * Roll raw metrics up into daily aggregates at 2 AM (before the 3 AM raw
+   * cleanup). Backfills the whole raw window so gaps (e.g. downtime) self-heal,
+   * then prunes daily rollups older than a year.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async rollupDaily() {
+    try {
+      for (let i = 1; i <= 7; i++) {
+        const day = new Date();
+        day.setDate(day.getDate() - i);
+        await this.metricsService.aggregateDay(day);
+      }
+      const pruned = await this.metricsService.cleanupOldDaily(365);
+      this.logger.log(`Daily rollup done; pruned ${pruned} rollups older than 365 days`);
+    } catch (error) {
+      this.logger.error('Failed to roll up daily metrics', error);
+    }
+  }
 }

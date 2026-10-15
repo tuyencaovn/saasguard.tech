@@ -16,4 +16,9 @@ export class MetricsController {
   async getHistory(@Query('minutes') minutes?: string) {
     return this.metricsService.getHistory(minutes ? parseInt(minutes, 10) : 60);
   }
+
+  @Get('history/daily')
+  async getDailyHistory(@Query('days') days?: string) {
+    return this.metricsService.getDailyHistory(days ? parseInt(days, 10) : 30);
+  }
 }

@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, LessThan } from 'typeorm';
 import * as si from 'systeminformation';
 import { MetricsHistory } from './entities/metrics-history.entity';
+import { MetricsDaily } from './entities/metrics-daily.entity';
 import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics, UptimeMetrics, NetworkMetrics } from './types/metrics.types';
 
 @Injectable()
@@ -13,6 +14,8 @@ export class MetricsService {
   constructor(
     @InjectRepository(MetricsHistory)
     private readonly historyRepository: Repository<MetricsHistory>,
+    @InjectRepository(MetricsDaily)
+    private readonly dailyRepository: Repository<MetricsDaily>,
   ) {}
 
   /**
@@ -176,6 +179,77 @@ export class MetricsService {
       .delete()
       .where('timestamp < :date', { date: retentionDate })
       .execute();
+    return result.affected || 0;
+  }
+
+  /**
+   * Aggregate one calendar day of raw history into a single daily rollup row.
+   * Idempotent: re-running upserts the same day. Skips days with no raw data.
+   */
+  async aggregateDay(date: Date): Promise<void> {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const stats = await this.historyRepository
+      .createQueryBuilder('h')
+      .select('AVG(h.cpuPercent)', 'cpuAvg')
+      .addSelect('MAX(h.cpuPercent)', 'cpuMax')
+      .addSelect('AVG(h.ramPercent)', 'ramAvg')
+      .addSelect('MAX(h.ramPercent)', 'ramMax')
+      .addSelect('AVG(h.diskPercent)', 'diskAvg')
+      .addSelect('MAX(h.diskPercent)', 'diskMax')
+      .addSelect('AVG(h.networkRx)', 'networkRxAvg')
+      .addSelect('AVG(h.networkTx)', 'networkTxAvg')
+      .addSelect('COUNT(*)', 'sampleCount')
+      .where('h.timestamp >= :start AND h.timestamp < :end', { start: dayStart, end: dayEnd })
+      .getRawOne();
+
+    const sampleCount = parseInt(stats.sampleCount, 10) || 0;
+    if (sampleCount === 0) return; // no raw data for this day
+
+    const dayKey = dayStart.toISOString().slice(0, 10); // YYYY-MM-DD
+    const round2 = (v: unknown) => Math.round((parseFloat(v as string) || 0) * 100) / 100;
+
+    const row = {
+      day: dayKey,
+      cpuAvg: round2(stats.cpuAvg),
+      cpuMax: round2(stats.cpuMax),
+      ramAvg: round2(stats.ramAvg),
+      ramMax: round2(stats.ramMax),
+      diskAvg: round2(stats.diskAvg),
+      diskMax: round2(stats.diskMax),
+      networkRxAvg: Math.round(parseFloat(stats.networkRxAvg) || 0),
+      networkTxAvg: Math.round(parseFloat(stats.networkTxAvg) || 0),
+      sampleCount,
+    };
+
+    await this.dailyRepository.upsert(row, ['day']);
+  }
+
+  /**
+   * Get daily rollup rows for the last N days (ascending).
+   */
+  async getDailyHistory(days = 30): Promise<MetricsDaily[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceKey = since.toISOString().slice(0, 10);
+    return this.dailyRepository.find({
+      where: { day: MoreThan(sinceKey) },
+      order: { day: 'ASC' },
+    });
+  }
+
+  /**
+   * Cleanup daily rollups older than N days (default 1 year).
+   */
+  async cleanupOldDaily(days = 365): Promise<number> {
+    const retentionDate = new Date();
+    retentionDate.setDate(retentionDate.getDate() - days);
+    const cutoff = retentionDate.toISOString().slice(0, 10);
+
+    const result = await this.dailyRepository.delete({ day: LessThan(cutoff) });
     return result.affected || 0;
   }
 }

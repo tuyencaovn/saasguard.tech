@@ -18,7 +18,10 @@ interface MetricsDataPoint {
   disk: number;
 }
 
-type TimeRange = '15m' | '1h' | '6h' | '24h';
+type TimeRange = '15m' | '1h' | '6h' | '24h' | '7d' | '30d' | '90d' | '1y';
+
+const DAILY_RANGES: TimeRange[] = ['7d', '30d', '90d', '1y'];
+const DAY = 1440;
 
 // Minutes for each time range
 const TIME_RANGE_MINUTES: Record<TimeRange, number> = {
@@ -26,14 +29,22 @@ const TIME_RANGE_MINUTES: Record<TimeRange, number> = {
   '1h': 60,
   '6h': 360,
   '24h': 1440,
+  '7d': 7 * DAY,
+  '30d': 30 * DAY,
+  '90d': 90 * DAY,
+  '1y': 365 * DAY,
 };
 
-// Tick interval in minutes for each time range (to get ~4 ticks)
+// Tick interval in minutes for each time range (to get ~4-6 ticks)
 const TICK_INTERVALS: Record<TimeRange, number> = {
   '15m': 5, // 5 min intervals
   '1h': 15, // 15 min intervals
   '6h': 90, // 1.5h intervals
   '24h': 360, // 6h intervals
+  '7d': 1 * DAY, // daily
+  '30d': 7 * DAY, // weekly
+  '90d': 15 * DAY,
+  '1y': 30 * DAY, // monthly
 };
 
 interface PerformanceChartProps {
@@ -41,8 +52,11 @@ interface PerformanceChartProps {
   timeRange: TimeRange;
 }
 
-// Format timestamp to HH:MM
-function formatTime(timestamp: number): string {
+// Format timestamp: HH:MM for intraday ranges, date for daily ranges
+function formatTime(timestamp: number, timeRange: TimeRange): string {
+  if (DAILY_RANGES.includes(timeRange)) {
+    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
   return new Date(timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -107,7 +121,7 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
             type="number"
             domain={domain}
             ticks={ticks}
-            tickFormatter={formatTime}
+            tickFormatter={(value) => formatTime(value, timeRange)}
             stroke="#71717a"
             fontSize={11}
             tickLine={false}
@@ -129,7 +143,7 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
               fontSize: '12px',
             }}
             labelStyle={{ color: '#a1a1aa' }}
-            labelFormatter={(value) => formatTime(value as number)}
+            labelFormatter={(value) => formatTime(value as number, timeRange)}
             formatter={(value: number, name: string) => [
               `${value.toFixed(1)}%`,
               name.toUpperCase(),

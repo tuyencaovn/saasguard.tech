@@ -32,13 +32,26 @@ interface LinkSpeedDataPoint {
   speed: number; // Mbps
 }
 
-type TimeRange = '15m' | '1h' | '6h' | '24h';
+type TimeRange = '15m' | '1h' | '6h' | '24h' | '7d' | '30d' | '90d' | '1y';
 
-const TIME_RANGE_CONFIG: Record<TimeRange, { label: string; minutes: number; maxPoints: number; sampleInterval: number }> = {
-  '15m': { label: 'Last 15 minutes', minutes: 15, maxPoints: 60, sampleInterval: 15 * 1000 }, // 15s
-  '1h': { label: 'Last 1 hour', minutes: 60, maxPoints: 60, sampleInterval: 60 * 1000 }, // 1m
-  '6h': { label: 'Last 6 hours', minutes: 360, maxPoints: 72, sampleInterval: 5 * 60 * 1000 }, // 5m
-  '24h': { label: 'Last 24 hours', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
+interface RangeConfig {
+  label: string;
+  source: 'raw' | 'daily';
+  maxPoints: number;
+  minutes?: number; // raw ranges
+  sampleInterval?: number; // raw ranges
+  days?: number; // daily ranges
+}
+
+const TIME_RANGE_CONFIG: Record<TimeRange, RangeConfig> = {
+  '15m': { label: 'Last 15 minutes', source: 'raw', minutes: 15, maxPoints: 60, sampleInterval: 15 * 1000 }, // 15s
+  '1h': { label: 'Last 1 hour', source: 'raw', minutes: 60, maxPoints: 60, sampleInterval: 60 * 1000 }, // 1m
+  '6h': { label: 'Last 6 hours', source: 'raw', minutes: 360, maxPoints: 72, sampleInterval: 5 * 60 * 1000 }, // 5m
+  '24h': { label: 'Last 24 hours', source: 'raw', minutes: 1440, maxPoints: 96, sampleInterval: 15 * 60 * 1000 }, // 15m
+  '7d': { label: 'Last 7 days', source: 'daily', days: 7, maxPoints: 7 },
+  '30d': { label: 'Last 30 days', source: 'daily', days: 30, maxPoints: 30 },
+  '90d': { label: 'Last 90 days', source: 'daily', days: 90, maxPoints: 90 },
+  '1y': { label: 'Last 1 year', source: 'daily', days: 365, maxPoints: 365 },
 };
 
 // Format network speed (bytes per second to MB/s)
@@ -77,6 +90,30 @@ async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsD
   }
 }
 
+// Fetch daily rollup history (long ranges). Uses per-day average values.
+async function fetchDailyHistory(days: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/metrics/history/daily?days=${days}`);
+    if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
+    const data = await res.json();
+    const metrics = data.map((item: { day: string; cpuAvg: number; ramAvg: number; diskAvg: number }) => ({
+      timestamp: new Date(item.day).getTime(),
+      cpu: Number(item.cpuAvg),
+      ram: Number(item.ramAvg),
+      disk: Number(item.diskAvg),
+    }));
+    const network = data.map((item: { day: string; networkRxAvg?: number; networkTxAvg?: number }) => ({
+      timestamp: new Date(item.day).getTime(),
+      rx: Number(item.networkRxAvg || 0),
+      tx: Number(item.networkTxAvg || 0),
+    }));
+    // Daily rollups don't store link speed — return empty series.
+    return { metrics, network, linkSpeed: [] };
+  } catch {
+    return { metrics: [], network: [], linkSpeed: [] };
+  }
+}
+
 export default function DashboardPage() {
   const { metrics } = useMetrics();
   const { containers, refetch: refetchContainers } = useDockerEvents();
@@ -96,7 +133,10 @@ export default function DashboardPage() {
     if (historyLoadedRef.current === timeRange) return;
 
     const config = TIME_RANGE_CONFIG[timeRange];
-    fetchMetricsHistory(config.minutes).then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
+    const loader = config.source === 'daily'
+      ? fetchDailyHistory(config.days ?? 30)
+      : fetchMetricsHistory(config.minutes ?? 60);
+    loader.then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
       setMetricsHistory(metricsData);
       setNetworkHistory(networkData);
       setLinkSpeedHistory(linkSpeedData);
@@ -110,6 +150,11 @@ export default function DashboardPage() {
       lastTimestampRef.current = metrics.timestamp;
       const now = Date.now();
       const config = TIME_RANGE_CONFIG[timeRange];
+
+      // Daily (long-range) views are historical snapshots — don't append live points.
+      if (config.source !== 'raw') return;
+      const sampleInterval = config.sampleInterval ?? 0;
+      const rangeMinutes = config.minutes ?? 60;
 
       const currentCpu = metrics.cpu.usage;
       const currentRam = metrics.ram.usagePercent;
@@ -130,7 +175,7 @@ export default function DashboardPage() {
 
       setMetricsHistory((prev) => {
         const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
+        if (lastPoint && now - lastPoint.timestamp < sampleInterval) {
           return prev;
         }
 
@@ -145,14 +190,14 @@ export default function DashboardPage() {
         // Reset peaks after sampling
         peakMetricsRef.current = { cpu: currentCpu, ram: currentRam, disk: currentDisk };
 
-        const cutoffTime = now - config.minutes * 60 * 1000;
+        const cutoffTime = now - rangeMinutes * 60 * 1000;
         const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
         return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
       });
 
       setNetworkHistory((prev) => {
         const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
+        if (lastPoint && now - lastPoint.timestamp < sampleInterval) {
           return prev;
         }
 
@@ -165,14 +210,14 @@ export default function DashboardPage() {
         // Reset peaks after sampling
         peakNetworkRef.current = { rx: currentRx, tx: currentTx };
 
-        const cutoffTime = now - config.minutes * 60 * 1000;
+        const cutoffTime = now - rangeMinutes * 60 * 1000;
         const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
         return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
       });
 
       setLinkSpeedHistory((prev) => {
         const lastPoint = prev[prev.length - 1];
-        if (lastPoint && now - lastPoint.timestamp < config.sampleInterval) {
+        if (lastPoint && now - lastPoint.timestamp < sampleInterval) {
           return prev;
         }
 
@@ -181,7 +226,7 @@ export default function DashboardPage() {
           speed: metrics.network?.speed ?? 0,
         };
 
-        const cutoffTime = now - config.minutes * 60 * 1000;
+        const cutoffTime = now - rangeMinutes * 60 * 1000;
         const filtered = prev.filter((p) => p.timestamp >= cutoffTime);
         return [...filtered.slice(-(config.maxPoints - 1)), dataPoint];
       });

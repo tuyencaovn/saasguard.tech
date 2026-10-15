@@ -16,13 +16,20 @@ interface LinkSpeedDataPoint {
   speed: number; // Mbps
 }
 
-type TimeRange = '15m' | '1h' | '6h' | '24h';
+type TimeRange = '15m' | '1h' | '6h' | '24h' | '7d' | '30d' | '90d' | '1y';
+
+const DAILY_RANGES: TimeRange[] = ['7d', '30d', '90d', '1y'];
+const DAY = 1440;
 
 const TIME_RANGE_MINUTES: Record<TimeRange, number> = {
   '15m': 15,
   '1h': 60,
   '6h': 360,
   '24h': 1440,
+  '7d': 7 * DAY,
+  '30d': 30 * DAY,
+  '90d': 90 * DAY,
+  '1y': 365 * DAY,
 };
 
 const TICK_INTERVALS: Record<TimeRange, number> = {
@@ -30,6 +37,10 @@ const TICK_INTERVALS: Record<TimeRange, number> = {
   '1h': 15,
   '6h': 90,
   '24h': 360,
+  '7d': 1 * DAY,
+  '30d': 7 * DAY,
+  '90d': 15 * DAY,
+  '1y': 30 * DAY,
 };
 
 interface LinkSpeedChartProps {
@@ -38,7 +49,10 @@ interface LinkSpeedChartProps {
   interfaceName?: string;
 }
 
-function formatTime(timestamp: number): string {
+function formatTime(timestamp: number, timeRange: TimeRange): string {
+  if (DAILY_RANGES.includes(timeRange)) {
+    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
   return new Date(timestamp).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -159,7 +173,7 @@ export function LinkSpeedChart({ data, timeRange, interfaceName = 'eth0' }: Link
               type="number"
               domain={domain}
               ticks={ticks}
-              tickFormatter={formatTime}
+              tickFormatter={(value) => formatTime(value, timeRange)}
               stroke="#71717a"
               fontSize={11}
               tickLine={false}
@@ -182,7 +196,7 @@ export function LinkSpeedChart({ data, timeRange, interfaceName = 'eth0' }: Link
                 fontSize: '12px',
               }}
               labelStyle={{ color: '#a1a1aa' }}
-              labelFormatter={(value) => formatTime(value as number)}
+              labelFormatter={(value) => formatTime(value as number, timeRange)}
               formatter={(value: number) => [formatSpeed(value), 'Link Speed']}
             />
             <Area
