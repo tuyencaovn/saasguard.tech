@@ -61,8 +61,21 @@ saasguard/
 └── docker-compose.yml
 ```
 
+## Self-Hosted Deployment
+
+Deploy on your own server in one command (Docker images pulled from GHCR):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/install.sh | bash
+```
+
+The installer generates secrets, picks free ports, configures Nginx + SSL (domain
+mode), and starts everything. See [Docker Deployment Guide](./docs/docker-deployment.md)
+and the [Quick Start](./docs/DEPLOYMENT-QUICKSTART.md).
+
 ## Documentation
 
+- [Docker Deployment Guide](./docs/docker-deployment.md)
 - [Deployment Guide](./docs/deployment-guide.md)
 - [Design Guidelines](./docs/design-guidelines.md)
 - [Code Standards](./docs/code-standards.md)

@@ -19,6 +19,10 @@
     "start:status": "pm2 status",
     "docker:build": "./scripts/build-docker.sh",
     "docker:push": "./scripts/build-docker.sh --push",
+    "docker:up": "docker compose -f docker-compose.prod.yml up -d",
+    "docker:down": "docker compose -f docker-compose.prod.yml down",
+    "docker:logs": "docker compose -f docker-compose.prod.yml logs -f",
+    "docker:restart": "docker compose -f docker-compose.prod.yml restart",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down"
   },
