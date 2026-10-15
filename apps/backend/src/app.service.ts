@@ -53,7 +53,7 @@ export class AppService {
         retentionDays: 7,
       },
       alerts: {
-        logRetentionDays: 30,
+        logRetentionDays: this.configService.get<number>('ALERT_LOG_RETENTION_DAYS', 30),
       },
     };
   }

@@ -40,7 +40,7 @@ export class AlertsScheduler {
   async cleanupLogs() {
     try {
       const deleted = await this.alertsService.cleanupOldLogs();
-      this.logger.log(`Cleaned up ${deleted} alert logs older than ${AlertsService.LOG_RETENTION_DAYS} days`);
+      this.logger.log(`Cleaned up ${deleted} alert logs older than ${this.alertsService.getLogRetentionDays()} days`);
     } catch (error) {
       this.logger.error('Failed to cleanup alert logs', error);
     }

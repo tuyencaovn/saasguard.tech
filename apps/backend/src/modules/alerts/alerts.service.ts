@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { AlertThreshold, MetricName, Operator, NotificationChannel } from './entities/alert-threshold.entity';
 import { AlertLog, DeliveryStatus } from './entities/alert-log.entity';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
@@ -13,7 +14,13 @@ export class AlertsService {
     private readonly thresholdRepository: Repository<AlertThreshold>,
     @InjectRepository(AlertLog)
     private readonly logRepository: Repository<AlertLog>,
+    private readonly configService: ConfigService,
   ) {}
+
+  // Alert log retention in days — ALERT_LOG_RETENTION_DAYS env, defaults to 30.
+  getLogRetentionDays(): number {
+    return this.configService.get<number>('ALERT_LOG_RETENTION_DAYS', 30);
+  }
 
   // Threshold CRUD
   async createThreshold(dto: CreateThresholdDto, userId?: string): Promise<AlertThreshold> {
@@ -185,11 +192,9 @@ export class AlertsService {
     }
   }
 
-  static readonly LOG_RETENTION_DAYS = 30;
-
   async cleanupOldLogs(): Promise<number> {
     const retentionDate = new Date();
-    retentionDate.setDate(retentionDate.getDate() - AlertsService.LOG_RETENTION_DAYS);
+    retentionDate.setDate(retentionDate.getDate() - this.getLogRetentionDays());
 
     const result = await this.logRepository.delete({
       triggeredAt: LessThan(retentionDate),
