@@ -1,8 +1,17 @@
+# Cap container stdout/stderr logs so they can't fill the disk
+# (10 MB per file, 3 rotated files = 30 MB max per container).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:16-alpine
     container_name: server-monitor_postgres
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-server-monitor}
       POSTGRES_USER: ${DATABASE_USER:-server-monitor}
@@ -26,6 +35,7 @@ services:
     image: ghcr.io/tuyencaovn/saasguard.tech/backend:latest
     container_name: server-monitor_backend
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -62,6 +72,7 @@ services:
     image: ghcr.io/tuyencaovn/saasguard.tech/frontend:latest
     container_name: server-monitor_frontend
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       backend:
         condition: service_healthy
