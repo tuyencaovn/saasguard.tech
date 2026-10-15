@@ -78,8 +78,11 @@ SMTP_FROM=alerts@company.com
 **Optional (Telegram alerts):**
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_CHAT_ID=-1234567890
+TELEGRAM_CHAT_ID=-1234567890   # group ID is negative; personal ID is positive
 ```
+
+Getting the chat ID (personal vs group/negative) is covered in
+[Docker Deployment Guide → Telegram Notifications](./docker-deployment.md#telegram-notifications).
 
 See `.env.example` for all options.
 
@@ -244,31 +247,31 @@ docker compose -f docker-compose.prod.yml exec db pg_isready -U server-monitor
 ```
 install.sh runs:
 
-1. Checks docker & docker compose v2
-2. Fetches docker-compose.prod.yml & .env.example if missing, creates .env
-3. Auto-generates secrets, then prompts for admin email + domain/IP → writes to .env
-4. Reads FRONTEND_URL → detects domain vs IP mode
+install.sh [--force]:
 
-5. IF DOMAIN MODE:
+1. Checks docker & docker compose v2
+2. (--force) Wipes containers, DB volume, .env and its own Nginx config
+3. Fetches docker-compose.prod.yml & .env.example if missing, creates .env
+4. Auto-generates secrets, then prompts for admin email + domain/IP → writes to .env
+5. Auto-assigns free host ports; auto-detects PM2_HOME from the running daemon
+6. Reads FRONTEND_URL → detects domain vs IP mode
+
+7. IF DOMAIN MODE:
    ├─ Checks nginx & certbot
+   ├─ Removes any old config serving the same domain (with confirmation)
    ├─ Generates /etc/nginx/sites-available/saasguard
    │  └─ Routes /api/* → backend, /socket.io/* → backend, /* → frontend
    ├─ Tests nginx config → reloads nginx
-   └─ Runs certbot for SSL certificate
+   └─ Runs certbot — reuses an existing cert, or auto-selects an account
+      (multi-account hosts) to issue without prompting
 
-6. Pulls images from GHCR:
+8. Pulls images from GHCR (retries on registry timeout):
    ├─ ghcr.io/tuyencaovn/saasguard.tech/backend:latest
    ├─ ghcr.io/tuyencaovn/saasguard.tech/frontend:latest
    └─ postgres:16-alpine
 
-7. Starts all services with docker compose up -d
-   ├─ Database starts first
-   ├─ Backend starts (depends on database)
-   └─ Frontend starts (depends on backend)
-
-8. Polls health endpoint until healthy
-
-9. Prints access URL & next steps
+9. Starts all services (db → backend → frontend), polls health
+10. Prints access URL, admin password, and real SSL status
 ```
 
 ---

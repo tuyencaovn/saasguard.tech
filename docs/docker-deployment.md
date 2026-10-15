@@ -27,9 +27,15 @@ install fresh from scratch:
 bash install.sh --force      # or: --reset
 ```
 
-⚠️ This deletes all data. The installer also detects other Nginx sites already
-serving your domain and offers to disable them (old/manual configs cause
-wrong routing when two server blocks share one `server_name`).
+⚠️ This deletes all data (database + `.env`). On `--force` the installer also
+removes its own Nginx config so it's regenerated clean (the SSL certificate is
+kept — certbot reuses it).
+
+Any **other** Nginx config that serves the **same domain** is detected and, with
+your confirmation, fully removed (both the `sites-enabled` symlink and the file
+in `sites-available`) — it's being replaced by this install, and leaving it
+causes duplicate `server_name` conflicts. Configs for other domains are left
+untouched.
 
 The script will:
 1. Check prerequisites
@@ -140,6 +146,13 @@ sudo certbot --nginx -d monitor.example.com --non-interactive --agree-tos -m adm
 # Auto-renewal is configured by certbot
 ```
 
+> `install.sh` does this automatically. It reuses an existing certificate when
+> one is present, and if the host has **multiple Let's Encrypt accounts** it
+> auto-selects one (`--account`) so issuance never blocks on an interactive
+> account prompt. If certbot still can't issue (e.g. DNS not pointing at the
+> server yet), the site runs on HTTP and the final summary shows the exact
+> `certbot` command to run once DNS is ready.
+
 ### 5. Start Services
 
 ```bash
@@ -221,8 +234,19 @@ TELEGRAM_CHAT_ID=-1234567890
   Read `chat.id` from the response. If it returns `{"result":[]}`, you haven't
   messaged the bot yet, or a webhook is set — clear it with
   `curl -s "https://api.telegram.org/bot<BOT_TOKEN>/deleteWebhook"` then message again.
-- Group chat (whole team): add the bot to the group, send a message, then read the
-  **negative** `chat.id` (e.g. `-1001234567890`).
+- Group chat (whole team) — the ID is **negative**:
+  1. Create the group and add your bot to it.
+  2. Send a message in the group. If the bot has privacy mode on it won't see
+     plain messages — **@mention the bot** (`@yourbot hi`) or disable privacy via
+     `@BotFather` → `/setprivacy` → select bot → **Disable**.
+  3. Read the ID:
+     ```bash
+     curl -s "https://api.telegram.org/bot<BOT_TOKEN>/getUpdates" | grep -o '"chat":{"id":-[0-9]*'
+     ```
+     Use the full value **including the minus sign**, e.g. `-1001234567890`
+     (supergroups/channels start with `-100`).
+  - Shortcut: add `@RawDataBot` to the group — it prints the `chat id` instantly;
+    remove it afterwards.
 
 ### PM2 Process Monitoring
 
