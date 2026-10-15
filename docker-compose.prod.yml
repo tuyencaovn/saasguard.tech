@@ -15,6 +15,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: ${DB_MEM_LIMIT:-512m}
+        reservations:
+          memory: 256m
 
   backend:
     image: ghcr.io/tuyencaovn/saasguard.tech/backend:latest
@@ -45,6 +51,12 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${BACKEND_MEM_LIMIT:-512m}
+        reservations:
+          memory: 256m
 
   frontend:
     image: ghcr.io/tuyencaovn/saasguard.tech/frontend:latest
@@ -61,6 +73,12 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: ${FRONTEND_MEM_LIMIT:-384m}
+        reservations:
+          memory: 128m
 
 volumes:
   pg_data:
