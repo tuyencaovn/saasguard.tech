@@ -378,7 +378,7 @@ git pull && docker compose up -d --build`}</CodeBlock>
                 },
                 {
                   q: 'Can I monitor multiple servers?',
-                  a: 'The Free tier monitors 1 server. Upgrade to Pro for unlimited servers. Each server needs its own Server Monitor installation.',
+                  a: 'Yes — monitor as many servers as you want, free. Each server needs its own Server Monitor installation.',
                 },
                 {
                   q: 'How do I reset my admin password?',

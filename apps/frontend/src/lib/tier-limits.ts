@@ -1,12 +1,14 @@
 export type Tier = 'free' | 'pro';
 
+// Billing is off for now — the free tier is unlocked to full access.
+// When paid plans return, restore the smaller free-tier limits here.
 export const TIER_LIMITS = {
   free: {
-    servers: 1,
-    sslDomains: 3,
-    alertChannels: ['email'] as string[],
-    crashDetection: false,
-    retentionDays: 7,
+    servers: Infinity,
+    sslDomains: 50,
+    alertChannels: ['email', 'telegram'] as string[],
+    crashDetection: true,
+    retentionDays: 90,
   },
   pro: {
     servers: Infinity,

@@ -13,8 +13,8 @@ interface CertResult {
   error: string | null;
 }
 
-const FREE_TIER_LIMIT = 3;
-const PRO_TIER_LIMIT = 50;
+// Billing is off for now — everyone gets the full limit.
+const SSL_MONITOR_LIMIT = 50;
 
 @Injectable()
 export class SslService {
@@ -34,12 +34,10 @@ export class SslService {
       throw new BadRequestException(`Domain ${dto.domain} is already being monitored`);
     }
 
-    // Enforce tier limit (free = 3, pro = 50)
     const count = await this.sslMonitorRepository.count({ where: { userId } });
-    const limit = FREE_TIER_LIMIT; // TODO: check user tier for pro limit
-    if (count >= limit) {
+    if (count >= SSL_MONITOR_LIMIT) {
       throw new BadRequestException(
-        `Free tier allows up to ${FREE_TIER_LIMIT} SSL monitors. Upgrade to Pro for up to ${PRO_TIER_LIMIT}.`,
+        `You can monitor up to ${SSL_MONITOR_LIMIT} SSL domains.`,
       );
     }
 

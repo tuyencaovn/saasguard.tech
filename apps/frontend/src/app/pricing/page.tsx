@@ -1,82 +1,47 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Shield, Check, X } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { PricingCard } from '@/components/landing/pricing-card';
-import { PRO_PRICE, PRO_STRIPE_LINK, TIER_LIMITS } from '@/lib/tier-limits';
+import { TIER_LIMITS } from '@/lib/tier-limits';
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Server Monitor';
 
 export const metadata: Metadata = {
   title: `Pricing | ${APP_NAME}`,
-  description: 'Simple, transparent pricing for SaaS server monitoring. Start free, upgrade when you need more.',
+  description: 'Free, self-hosted server monitoring. Every feature unlocked — your metrics never leave your infrastructure.',
 };
 
-const FREE_FEATURES = [
-  '1 server monitored',
-  'Real-time CPU, RAM, disk metrics',
-  'Email alerts',
-  `SSL monitoring (${TIER_LIMITS.free.sslDomains} domains)`,
-  'Health score dashboard',
-  `${TIER_LIMITS.free.retentionDays}-day metric history`,
-];
-
-const PRO_FEATURES = [
+const FEATURES = [
   'Unlimited servers',
+  'Real-time CPU, RAM, disk metrics',
+  'Email + Telegram alerts',
   'Crash-loop detection with history',
   'Disk risk prediction',
   'SSL expiry alerts (30/14/7 days)',
-  `SSL monitoring (${TIER_LIMITS.pro.sslDomains} domains)`,
-  'Email + Telegram alerts',
-  'Health score with trends',
+  `SSL monitoring (${TIER_LIMITS.free.sslDomains} domains)`,
   'PM2 process monitoring',
-  `${TIER_LIMITS.pro.retentionDays}-day metric history`,
-  'Priority support',
-];
-
-const COMPARISON_ROWS: { label: string; free: string | boolean; pro: string | boolean }[] = [
-  { label: 'Servers',            free: '1',                                 pro: 'Unlimited' },
-  { label: 'SSL domains',        free: `${TIER_LIMITS.free.sslDomains}`,    pro: `${TIER_LIMITS.pro.sslDomains}` },
-  { label: 'Metric history',     free: `${TIER_LIMITS.free.retentionDays}d`, pro: `${TIER_LIMITS.pro.retentionDays}d` },
-  { label: 'Email alerts',       free: true,                                pro: true },
-  { label: 'Telegram alerts',    free: false,                               pro: true },
-  { label: 'Crash-loop detection', free: false,                             pro: true },
-  { label: 'Disk risk alerts',   free: true,                                pro: true },
-  { label: 'PM2 monitoring',     free: true,                                pro: true },
-  { label: 'Health score',       free: true,                                pro: true },
-  { label: 'Priority support',   free: false,                               pro: true },
+  'Health score with trends',
+  `${TIER_LIMITS.free.retentionDays}-day metric history`,
 ];
 
 const FAQS = [
   {
-    q: 'Can I self-host for free?',
-    a: 'Yes. Run the install script on your server and use the Free tier indefinitely. No credit card required.',
+    q: 'Is it really free?',
+    a: 'Yes. Every feature is unlocked and free to use right now. Run the install script on your own server — no credit card, no limits.',
   },
   {
     q: 'How do I install Server Monitor?',
     a: 'One command: curl -s https://saasguard.tech/install.sh | bash — Docker and Docker Compose required.',
   },
   {
-    q: 'How does Pro billing work?',
-    a: 'Pro is $' + PRO_PRICE + '/mo. Contact us to upgrade — we\'ll send a payment link and manually activate Pro on your account.',
-  },
-  {
-    q: 'What happens if I exceed the free tier limits?',
-    a: 'The dashboard shows upgrade prompts. Your existing monitoring continues to work — we won\'t cut you off without warning.',
-  },
-  {
     q: 'Do you store my server metrics in the cloud?',
     a: 'No. Server Monitor runs entirely on your own server. Your metrics never leave your infrastructure.',
   },
+  {
+    q: 'Will it stay free?',
+    a: 'Everything is free for now. Paid plans may arrive later, but your self-hosted install keeps working.',
+  },
 ];
-
-function CellValue({ value }: { value: string | boolean }) {
-  if (typeof value === 'boolean') {
-    return value
-      ? <Check className="w-4 h-4 text-emerald-400 mx-auto" />
-      : <X className="w-4 h-4 text-white/20 mx-auto" />;
-  }
-  return <span className="text-white/70 text-sm">{value}</span>;
-}
 
 export default function PricingPage() {
   return (
@@ -116,64 +81,27 @@ export default function PricingPage() {
               Pricing
             </p>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-5 tracking-tight">
-              Simple, honest pricing
+              Free, every feature included
             </h1>
             <p className="text-white/40 text-lg max-w-xl mx-auto">
-              Start free on your own server. Upgrade when you need more servers or advanced alerts.
-              No hidden fees, no per-alert charges.
+              Self-host on your own server with everything unlocked. No credit card,
+              no per-alert charges, no limits.
             </p>
           </div>
         </section>
 
-        {/* Pricing cards */}
+        {/* Pricing card */}
         <section className="pb-16 px-4">
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+          <div className="max-w-md mx-auto">
             <PricingCard
               name="Free"
               price="$0"
-              description="For indie hackers running a single server."
-              features={FREE_FEATURES}
+              description="Everything unlocked. Runs entirely on your own server."
+              features={FEATURES}
               cta="Install Now — Free"
               ctaHref="https://github.com/tuyencaovn/saasguard.tech"
-            />
-            <PricingCard
-              name="Pro"
-              price={`$${PRO_PRICE}`}
-              period="mo"
-              description="For founders with multiple servers and serious uptime needs."
-              features={PRO_FEATURES}
-              cta={`Upgrade to Pro — $${PRO_PRICE}/mo`}
-              ctaHref={PRO_STRIPE_LINK}
               highlighted
-              badge="Most popular"
             />
-          </div>
-        </section>
-
-        {/* Feature comparison table */}
-        <section className="py-16 px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-8 text-white/90">
-              Full feature comparison
-            </h2>
-            <div className="rounded-2xl border border-white/10 overflow-hidden">
-              {/* Table header */}
-              <div className="grid grid-cols-3 bg-white/5 px-6 py-3 text-sm font-semibold text-white/60 uppercase tracking-wider">
-                <span>Feature</span>
-                <span className="text-center">Free</span>
-                <span className="text-center text-violet-400">Pro</span>
-              </div>
-              {COMPARISON_ROWS.map((row, idx) => (
-                <div
-                  key={row.label}
-                  className={`grid grid-cols-3 px-6 py-3.5 items-center ${idx < COMPARISON_ROWS.length - 1 ? 'border-b border-white/5' : ''}`}
-                >
-                  <span className="text-sm text-white/70">{row.label}</span>
-                  <div className="text-center"><CellValue value={row.free} /></div>
-                  <div className="text-center"><CellValue value={row.pro} /></div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 

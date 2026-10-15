@@ -6,6 +6,10 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { PRO_PRICE, PRO_STRIPE_LINK } from '@/lib/tier-limits';
 
+// Billing is off for now — everything is free. Flip to true to bring back
+// the upgrade prompts and $19 Pro CTAs.
+const BILLING_ENABLED = false;
+
 interface UpgradePromptProps {
   feature: string;
   description?: string;
@@ -23,6 +27,7 @@ export function UpgradePrompt({
 }: UpgradePromptProps) {
   const [dismissed, setDismissed] = useState(false);
 
+  if (!BILLING_ENABLED) return null;
   if (dismissed) return null;
 
   if (variant === 'badge') {
