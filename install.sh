@@ -274,6 +274,29 @@ resolve_ports() {
   success "Frontend port: $dash_port"
 }
 
+# Auto-detect the host PM2 home and persist it to .env.
+# PM2 names its daemon process "PM2 vX: God Daemon (<PM2_HOME>)", so the exact
+# path can be read straight from `ps` — no guessing the user. Running this
+# before `up -d` means the first start already has the correct mount.
+detect_pm2_home() {
+  step "Detecting PM2"
+
+  local line home
+  line=$(ps -eo args= 2>/dev/null | grep -m1 "God Daemon (")
+  if [ -z "$line" ]; then
+    info "No running PM2 daemon found — skipping (set PM2_HOME manually if needed)"
+    return
+  fi
+
+  home=$(echo "$line" | sed -n 's/.*God Daemon (\([^)]*\)).*/\1/p')
+  if [ -n "$home" ] && [ -d "$home" ]; then
+    set_env_var PM2_HOME "$home"
+    success "PM2 detected — PM2_HOME=$home"
+  else
+    info "PM2 daemon found but home unresolved — leaving PM2_HOME unchanged"
+  fi
+}
+
 # pick_port <current> <default> <name>
 # Resolves "auto"/empty to the first free port; validates explicit values and
 # reassigns to the next free port if the requested one is taken.
@@ -491,6 +514,7 @@ main() {
   detect_mode
 
   resolve_ports
+  detect_pm2_home
   setup_nginx
 
   pull_images

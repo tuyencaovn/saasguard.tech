@@ -213,26 +213,25 @@ TELEGRAM_CHAT_ID=-1234567890
 
 ### PM2 Process Monitoring
 
-To monitor PM2 processes running on the host, the backend must connect to the
-host's PM2 daemon. Two requirements:
+To monitor PM2 processes running on the host, the backend connects to the host's
+PM2 daemon.
 
-1. **`PM2_HOME` must point to the user that runs PM2.** Find it by running, as
-   that user, `echo $PM2_HOME` (or `ls -d ~/.pm2`):
-   ```env
-   # e.g. pm2 runs under the "devops" user
-   PM2_HOME=/home/devops/.pm2
+**`PM2_HOME` is auto-detected.** `install.sh` reads the path straight from the
+running PM2 daemon process and writes it to `.env` before starting — so a fresh
+install needs no manual PM2 config, as long as PM2 is already running.
+
+Two things to know:
+
+1. **PM2 must be running at install time** for auto-detect to work. If you start
+   PM2 later, set `PM2_HOME` manually (the `.pm2` dir of the user running PM2,
+   e.g. `/home/devops/.pm2`) and recreate the backend:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --force-recreate backend
    ```
-   If this points at the wrong user, the backend connects to an empty daemon and
-   shows "No PM2 processes found".
 
 2. **PM2 major version must match.** The backend image ships pm2 7.x. Check the
    host with `pm2 --version`; if it differs by a major version, the in-container
    client spawns its own empty daemon instead of attaching to the host one.
-
-After changing `PM2_HOME`, recreate the backend so the new mount applies:
-```bash
-docker compose -f docker-compose.prod.yml up -d --force-recreate backend
-```
 
 ---
 
@@ -333,8 +332,9 @@ docker compose -f docker-compose.prod.yml down -v  # Warning: deletes data!
   `localhost:3005/health`) will fail.
 
 ### PM2 shows "No processes found"
-- `PM2_HOME` must point to the user that actually runs PM2 (e.g.
-  `/home/devops/.pm2`, not `/root/.pm2`). Verify with `echo $PM2_HOME` as that user.
+- `install.sh` auto-detects `PM2_HOME`, but only if PM2 was running at install
+  time. Check the value in `.env` — it must be the `.pm2` dir of the user running
+  PM2 (e.g. `/home/devops/.pm2`, not `/root/.pm2`). Fix it and recreate backend.
 - Host `pm2 --version` must match the backend's pm2 major version (7.x).
 - After editing `PM2_HOME`, recreate the backend (mounts only change on recreate):
   ```bash
