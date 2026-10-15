@@ -185,10 +185,11 @@ export class AlertsService {
     }
   }
 
-  // Cleanup old logs (retention: 90 days)
+  static readonly LOG_RETENTION_DAYS = 30;
+
   async cleanupOldLogs(): Promise<number> {
     const retentionDate = new Date();
-    retentionDate.setDate(retentionDate.getDate() - 90);
+    retentionDate.setDate(retentionDate.getDate() - AlertsService.LOG_RETENTION_DAYS);
 
     const result = await this.logRepository.delete({
       triggeredAt: LessThan(retentionDate),

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { AlertsService } from './alerts.service';
 import { EmailService } from '../email/email.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -30,6 +31,19 @@ export class AlertsScheduler {
   ) {
     const brand = getBrandConfig(this.configService);
     this.appName = brand.appName;
+  }
+
+  /**
+   * Delete alert logs older than the retention window, daily at 3 AM.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupLogs() {
+    try {
+      const deleted = await this.alertsService.cleanupOldLogs();
+      this.logger.log(`Cleaned up ${deleted} alert logs older than ${AlertsService.LOG_RETENTION_DAYS} days`);
+    } catch (error) {
+      this.logger.error('Failed to cleanup alert logs', error);
+    }
   }
 
   /**

@@ -53,7 +53,7 @@ export class AppService {
         retentionDays: 7,
       },
       alerts: {
-        logRetentionDays: 90,
+        logRetentionDays: 30,
       },
     };
   }
