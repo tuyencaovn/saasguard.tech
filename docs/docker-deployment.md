@@ -197,6 +197,43 @@ TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_CHAT_ID=-1234567890
 ```
 
+**Create a bot:** chat with `@BotFather` → `/newbot` → copy the token.
+
+**Find your chat ID:**
+- Personal chat (simplest, no group needed): message `@userinfobot` → it replies `Id: 123456789` (a positive number).
+- Or message your own bot once, then:
+  ```bash
+  curl -s "https://api.telegram.org/bot<BOT_TOKEN>/getUpdates"
+  ```
+  Read `chat.id` from the response. If it returns `{"result":[]}`, you haven't
+  messaged the bot yet, or a webhook is set — clear it with
+  `curl -s "https://api.telegram.org/bot<BOT_TOKEN>/deleteWebhook"` then message again.
+- Group chat (whole team): add the bot to the group, send a message, then read the
+  **negative** `chat.id` (e.g. `-1001234567890`).
+
+### PM2 Process Monitoring
+
+To monitor PM2 processes running on the host, the backend must connect to the
+host's PM2 daemon. Two requirements:
+
+1. **`PM2_HOME` must point to the user that runs PM2.** Find it by running, as
+   that user, `echo $PM2_HOME` (or `ls -d ~/.pm2`):
+   ```env
+   # e.g. pm2 runs under the "devops" user
+   PM2_HOME=/home/devops/.pm2
+   ```
+   If this points at the wrong user, the backend connects to an empty daemon and
+   shows "No PM2 processes found".
+
+2. **PM2 major version must match.** The backend image ships pm2 7.x. Check the
+   host with `pm2 --version`; if it differs by a major version, the in-container
+   client spawns its own empty daemon instead of attaching to the host one.
+
+After changing `PM2_HOME`, recreate the backend so the new mount applies:
+```bash
+docker compose -f docker-compose.prod.yml up -d --force-recreate backend
+```
+
 ---
 
 ## Common Operations
@@ -289,6 +326,24 @@ docker compose -f docker-compose.prod.yml down -v  # Warning: deletes data!
 - Backend may still be starting, wait 30 seconds
 - Check backend logs: `docker compose -f docker-compose.prod.yml logs backend`
 - Verify `BIND_HOST=127.0.0.1` in .env (not 0.0.0.0)
+
+### Backend stays "unhealthy"
+- The app listens on port 3005 inside the container; the compose file sets
+  `PORT=3005` for the backend. If you overrode it, the healthcheck (which probes
+  `localhost:3005/health`) will fail.
+
+### PM2 shows "No processes found"
+- `PM2_HOME` must point to the user that actually runs PM2 (e.g.
+  `/home/devops/.pm2`, not `/root/.pm2`). Verify with `echo $PM2_HOME` as that user.
+- Host `pm2 --version` must match the backend's pm2 major version (7.x).
+- After editing `PM2_HOME`, recreate the backend (mounts only change on recreate):
+  ```bash
+  docker compose -f docker-compose.prod.yml up -d --force-recreate backend
+  ```
+- Verify the mount points source and destination at the same path:
+  ```bash
+  docker inspect server-monitor_backend --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+  ```
 
 ---
 

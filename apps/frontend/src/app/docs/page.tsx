@@ -370,7 +370,7 @@ git pull && docker compose up -d --build`}</CodeBlock>
                 },
                 {
                   q: 'How do I update Server Monitor?',
-                  a: 'Run: cd ~/saasguard && git pull && docker compose up -d --build. Your data is stored in PostgreSQL and persists across updates.',
+                  a: 'Run: cd ~/server-monitor && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d. Your data is stored in PostgreSQL and persists across updates.',
                 },
                 {
                   q: 'Does Server Monitor send my data anywhere?',
