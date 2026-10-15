@@ -34,7 +34,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/hostfs:ro
-      - ${PM2_HOME:-/root/.pm2}:/root/.pm2
+      # Mount host PM2 home at the SAME path inside the container so the pm2
+      # client (which reads PM2_HOME from .env) finds the socket where it looks.
+      - ${PM2_HOME:-/root/.pm2}:${PM2_HOME:-/root/.pm2}
     user: root
     pid: host
     healthcheck:
