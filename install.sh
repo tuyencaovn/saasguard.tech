@@ -136,6 +136,13 @@ reset_existing() {
       || info "No running stack to stop"
   fi
   rm -f .env && info "Removed old .env (will be regenerated)"
+
+  # Drop our own Nginx config so it is regenerated clean. The SSL cert is kept
+  # on purpose — certbot reuses it (re-issuing risks Let's Encrypt rate limits).
+  if [ -e /etc/nginx/sites-available/saasguard ] || [ -e /etc/nginx/sites-enabled/saasguard ]; then
+    sudo rm -f /etc/nginx/sites-available/saasguard /etc/nginx/sites-enabled/saasguard
+    info "Removed old Nginx config (regenerated during setup; SSL cert kept)"
+  fi
 }
 
 # Download docker-compose.prod.yml if it is not already present.
