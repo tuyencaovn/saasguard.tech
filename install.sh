@@ -11,6 +11,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADMIN_PW=""
 ADMIN_PW_GENERATED=false
 
+# --force / --reset: wipe the existing deployment (containers, DB volume, .env)
+# and install clean from scratch.
+FORCE=false
+for arg in "$@"; do
+  case "$arg" in
+    --force | --reset) FORCE=true ;;
+  esac
+done
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -113,6 +122,20 @@ check_nginx_for_domain() {
     error "Certbot not found. Install with: sudo apt-get install certbot python3-certbot-nginx"
   fi
   success "Nginx and Certbot found"
+}
+
+# Force reset: tear down containers + DB volume and drop the old .env so the
+# install starts completely fresh. Destroys all existing data.
+reset_existing() {
+  step "Force reset — wiping existing deployment (containers, volumes, .env)"
+  warn "This deletes the database and all existing data"
+
+  if [ -f docker-compose.prod.yml ]; then
+    docker compose -f docker-compose.prod.yml down -v 2>/dev/null \
+      && success "Stopped containers and removed volumes" \
+      || info "No running stack to stop"
+  fi
+  rm -f .env && info "Removed old .env (will be regenerated)"
 }
 
 # Download docker-compose.prod.yml if it is not already present.
@@ -334,6 +357,24 @@ setup_nginx() {
   NGINX_CONF="/etc/nginx/sites-available/saasguard"
   NGINX_ENABLED="/etc/nginx/sites-enabled/saasguard"
 
+  # Detect other enabled sites already serving this domain (old/manual configs).
+  # Two server blocks for the same server_name make Nginx pick the wrong one.
+  local conflicts
+  conflicts=$(sudo grep -RlE "server_name[^;]*\b${DOMAIN}\b" /etc/nginx/sites-enabled/ 2>/dev/null | grep -v '/saasguard$' || true)
+  if [ -n "$conflicts" ]; then
+    warn "Other Nginx sites already serve ${DOMAIN} (will conflict):"
+    echo "$conflicts" | sed 's/^/      /'
+    local ans
+    ans=$(ask "Disable these conflicting sites?" "y")
+    if [ "$ans" = y ] || [ "$ans" = Y ]; then
+      while IFS= read -r f; do
+        [ -n "$f" ] && sudo rm -f "$f" && info "Disabled $f"
+      done <<< "$conflicts"
+    else
+      warn "Left in place — they may shadow this config and cause wrong routing"
+    fi
+  fi
+
   # Write nginx config
   sudo tee "$NGINX_CONF" > /dev/null <<EOF
 server {
@@ -504,6 +545,8 @@ main() {
   step "Checking prerequisites"
   check_docker
   check_docker_compose
+
+  [ "$FORCE" = true ] && reset_existing
 
   step "Setting up configuration"
   fetch_compose

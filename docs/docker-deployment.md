@@ -18,6 +18,19 @@ Deploy Server Monitor on your own server using Docker Compose. The entire setup 
 curl -fsSL https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/install.sh | bash
 ```
 
+### Clean reinstall (`--force`)
+
+To wipe an existing deployment (containers, database volume, and `.env`) and
+install fresh from scratch:
+
+```bash
+bash install.sh --force      # or: --reset
+```
+
+⚠️ This deletes all data. The installer also detects other Nginx sites already
+serving your domain and offers to disable them (old/manual configs cause
+wrong routing when two server blocks share one `server_name`).
+
 The script will:
 1. Check prerequisites
 2. Download `docker-compose.prod.yml` and `.env.example` if missing (self-contained)
