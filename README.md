@@ -1,4 +1,4 @@
-# SaaSGuard — Silent Crash Monitor for Small SaaS
+# Server Monitor — Silent Crash Monitor for Small SaaS
 
 Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted before your users notice. Built for small SaaS founders.
 

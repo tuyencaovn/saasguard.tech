@@ -24,7 +24,7 @@ fi
 [ -z "$DOMAIN" ] && err "Domain is required"
 
 echo ""
-echo "  SaaSGuard — Marketing Site Deploy"
+echo "  Server Monitor — Marketing Site Deploy"
 echo "  Domain: $DOMAIN"
 echo "  Port:   $PORT"
 echo ""
@@ -42,7 +42,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 docker build -t saasguard-marketing \
   --build-arg NEXT_PUBLIC_MARKETING=true \
-  --build-arg NEXT_PUBLIC_APP_NAME=SaaSGuard \
+  --build-arg NEXT_PUBLIC_APP_NAME=Server Monitor \
   -f "$PROJECT_DIR/apps/frontend/Dockerfile" "$PROJECT_DIR/apps/frontend"
 info "Image built"
 

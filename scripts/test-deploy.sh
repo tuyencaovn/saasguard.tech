@@ -1,5 +1,5 @@
 #!/bin/bash
-# SaaSGuard — Test Deploy (build from source on VPS)
+# Server Monitor — Test Deploy (build from source on VPS)
 # Usage: SSH into VPS, clone repo, then run:
 #   ./scripts/test-deploy.sh
 # Builds images locally (no GHCR needed) and starts everything.
@@ -20,7 +20,7 @@ step()  { echo -e "\n${CYAN}▸ $1${NC}"; }
 error() { echo -e "${RED}✗${NC} $1"; exit 1; }
 
 echo ""
-echo -e "${CYAN}  SaaSGuard — Test Deploy (build from source)${NC}"
+echo -e "${CYAN}  Server Monitor — Test Deploy (build from source)${NC}"
 echo ""
 
 # ── Prerequisites ──────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
 TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-APP_NAME=SaaSGuard
-NEXT_PUBLIC_APP_NAME=SaaSGuard
+APP_NAME=Server Monitor
+NEXT_PUBLIC_APP_NAME=Server Monitor
 NEXT_PUBLIC_API_URL=${API_URL}
 NEXT_PUBLIC_WS_URL=${WS_URL}
 
@@ -120,7 +120,7 @@ step "Building frontend image..."
 docker build -t saasguard-frontend \
   --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
   --build-arg NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL}" \
-  --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME:-SaaSGuard}" \
+  --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME:-Server Monitor}" \
   -f apps/frontend/Dockerfile apps/frontend
 info "Frontend image built"
 
@@ -210,7 +210,7 @@ fi
 
 # ── Summary ────────────────────────────────────────────────────────────────
 echo ""
-echo -e "  ${GREEN}✓ SaaSGuard deployed!${NC}"
+echo -e "  ${GREEN}✓ Server Monitor deployed!${NC}"
 echo ""
 if [ "${DEPLOY_MODE}" = "domain" ]; then
   echo "  Dashboard: https://${DASHBOARD_DOMAIN}"

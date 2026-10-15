@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Terminal, Sparkles } from 'lucide-react';
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Server Monitor';
 
 export function HeroSection() {
   return (

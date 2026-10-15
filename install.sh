@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# SaaSGuard Docker Installation Script
+# Server Monitor Docker Installation Script
 # Usage: ./install.sh (interactive) or curl -fsSL https://...install.sh | bash
 
 REPO_URL="https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master"
@@ -174,10 +174,9 @@ prompt_config() {
   domain=$(ask "Domain or server IP (e.g. monitor.example.com)" "")
   [ -z "$domain" ] && error "Domain or IP is required"
 
+  # IP → http:// (port auto-appended later by resolve_ports); domain → https://
   if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    local port
-    port=$(ask "Frontend port" "3006")
-    url="http://${domain}:${port}"
+    url="http://${domain}"
   else
     url="https://${domain}"
   fi
@@ -251,41 +250,35 @@ detect_mode() {
   fi
 }
 
-# Auto-resolve valid, free host ports and persist them to .env
+# Auto-resolve valid, free host ports and persist them to .env.
+# In IP mode the resolved frontend port is appended to FRONTEND_URL.
 resolve_ports() {
   step "Resolving service ports"
 
   local api_port dash_port
-  api_port=$(get_env_var API_PORT)
-  dash_port=$(get_env_var DASH_PORT)
-
-  # IP mode: frontend port is baked into FRONTEND_URL — keep them in sync
-  if [ "$DEPLOY_MODE" = "ip" ]; then
-    local url_port
-    url_port=$(echo "$FRONTEND_URL" | sed -n 's|.*://[^:/]*:\([0-9]\{1,5\}\).*|\1|p')
-    [ -n "$url_port" ] && dash_port="$url_port"
-  fi
-
-  api_port=$(pick_port "$api_port" 3005 "API_PORT" false)
-  # Frontend port is user-facing in IP mode — do not silently reassign
-  if [ "$DEPLOY_MODE" = "ip" ]; then
-    dash_port=$(pick_port "$dash_port" 3006 "DASH_PORT" true)
-  else
-    dash_port=$(pick_port "$dash_port" 3006 "DASH_PORT" false)
-  fi
+  api_port=$(pick_port "$(get_env_var API_PORT)" 3005 "API_PORT")
+  dash_port=$(pick_port "$(get_env_var DASH_PORT)" 3006 "DASH_PORT")
 
   set_env_var API_PORT "$api_port"
   set_env_var DASH_PORT "$dash_port"
+
+  if [ "$DEPLOY_MODE" = "ip" ]; then
+    local base
+    base=$(echo "$FRONTEND_URL" | sed 's|:[0-9]\{1,5\}$||')   # strip any existing port
+    FRONTEND_URL="${base}:${dash_port}"
+    set_env_var FRONTEND_URL "$FRONTEND_URL"
+    success "Frontend URL:  $FRONTEND_URL"
+  fi
 
   success "Backend port:  $api_port"
   success "Frontend port: $dash_port"
 }
 
-# pick_port <current> <default> <name> <strict>
-# Resolves "auto"/empty to a free port; validates explicit values.
-# strict=true errors on conflict (user-facing), false reassigns to next free.
+# pick_port <current> <default> <name>
+# Resolves "auto"/empty to the first free port; validates explicit values and
+# reassigns to the next free port if the requested one is taken.
 pick_port() {
-  local current=$1 default=$2 name=$3 strict=$4 port
+  local current=$1 default=$2 name=$3 port
 
   if [ -z "$current" ] || [ "$current" = "auto" ]; then
     port=$(find_free_port "$default")
@@ -294,8 +287,6 @@ pick_port() {
     error "$name invalid: '$current' (must be 1-65535 or 'auto')"
   elif is_port_free "$current"; then
     port=$current
-  elif [ "$strict" = true ]; then
-    error "$name port $current is already in use. Free it or change FRONTEND_URL."
   else
     port=$(find_free_port "$((current + 1))")
     warn "$name port $current in use → using $port instead" >&2
@@ -405,7 +396,7 @@ pull_images() {
 
 # Start services
 start_services() {
-  step "Starting SaaSGuard services"
+  step "Starting Server Monitor services"
 
   if ! docker compose -f docker-compose.prod.yml up -d; then
     error "Failed to start services"
@@ -439,9 +430,9 @@ wait_for_health() {
 # Print summary
 print_summary() {
   echo ""
-  echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
-  echo -e "${GREEN}║  SaaSGuard installation complete!     ║${NC}"
-  echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
+  echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
+  echo -e "${GREEN}║  Server Monitor installation complete!   ║${NC}"
+  echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
   echo ""
 
   if [ "$DEPLOY_MODE" = "domain" ]; then
@@ -482,9 +473,9 @@ print_summary() {
 # Main flow
 main() {
   echo ""
-  echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-  echo -e "${BLUE}║  SaaSGuard Docker Installation        ║${NC}"
-  echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+  echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
+  echo -e "${BLUE}║  Server Monitor Docker Installation      ║${NC}"
+  echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
   echo ""
 
   step "Checking prerequisites"

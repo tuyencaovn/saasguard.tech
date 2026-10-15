@@ -2,7 +2,7 @@
 
 ## Quick Start (Docker — Recommended)
 
-One command to install SaaSGuard on any Ubuntu/Debian VPS:
+One command to install Server Monitor on any Ubuntu/Debian VPS:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/saasguard/saasguard/master/public/install.sh | bash
@@ -133,8 +133,8 @@ docker compose up -d postgres
 ```env
 PORT=3005
 NODE_ENV=production
-APP_NAME=SaaSGuard
-APP_SHORT_NAME=SaaSGuard
+APP_NAME=Server Monitor
+APP_SHORT_NAME=Server Monitor
 DATABASE_HOST=localhost
 DATABASE_PORT=5435
 DATABASE_USER=monitor
@@ -158,8 +158,8 @@ TELEGRAM_CHAT_ID=
 Domain mode (single domain, path-based routing):
 ```env
 PORT=3006
-NEXT_PUBLIC_APP_NAME=SaaSGuard
-NEXT_PUBLIC_APP_SHORT_NAME=SaaSGuard
+NEXT_PUBLIC_APP_NAME=Server Monitor
+NEXT_PUBLIC_APP_SHORT_NAME=Server Monitor
 NEXT_PUBLIC_API_URL=https://monitor.yourdomain.com/api
 NEXT_PUBLIC_WS_URL=https://monitor.yourdomain.com
 ```
@@ -167,8 +167,8 @@ NEXT_PUBLIC_WS_URL=https://monitor.yourdomain.com
 IP mode:
 ```env
 PORT=3006
-NEXT_PUBLIC_APP_NAME=SaaSGuard
-NEXT_PUBLIC_APP_SHORT_NAME=SaaSGuard
+NEXT_PUBLIC_APP_NAME=Server Monitor
+NEXT_PUBLIC_APP_SHORT_NAME=Server Monitor
 NEXT_PUBLIC_API_URL=http://YOUR_IP:3005
 NEXT_PUBLIC_WS_URL=http://YOUR_IP:3005
 ```
@@ -334,7 +334,7 @@ GET /health → 200 OK  (no auth needed)
 
 ## Database
 
-TypeORM `synchronize: true` is always enabled. SaaSGuard is a self-hosted product; schema is auto-managed — no manual migrations required.
+TypeORM `synchronize: true` is always enabled. Server Monitor is a self-hosted product; schema is auto-managed — no manual migrations required.
 
 ---
 
@@ -346,8 +346,8 @@ TypeORM `synchronize: true` is always enabled. SaaSGuard is a self-hosted produc
 |----------|----------|---------|-------------|
 | `PORT` | No | 3005 | Backend port |
 | `NODE_ENV` | No | development | Environment |
-| `APP_NAME` | No | SaaSGuard | Full app name (emails, UI) |
-| `APP_SHORT_NAME` | No | SaaSGuard | Short brand name (sidebar, logo) |
+| `APP_NAME` | No | Server Monitor | Full app name (emails, UI) |
+| `APP_SHORT_NAME` | No | Server Monitor | Short brand name (sidebar, logo) |
 | `DATABASE_HOST` | Yes | - | PostgreSQL host |
 | `DATABASE_PORT` | Yes | - | PostgreSQL port |
 | `DATABASE_USER` | Yes | - | PostgreSQL user |

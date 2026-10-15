@@ -1,8 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 
 // Default brand values
-export const DEFAULT_APP_NAME = 'SaaSGuard';
-export const DEFAULT_APP_SHORT_NAME = 'SaaSGuard';
+export const DEFAULT_APP_NAME = 'Server Monitor';
+export const DEFAULT_APP_SHORT_NAME = 'Server Monitor';
 
 /**
  * Get brand config from environment or use defaults

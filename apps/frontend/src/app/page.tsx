@@ -7,7 +7,7 @@ import { FeaturesSection } from '@/components/landing/features-section';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
 import { CTASection } from '@/components/landing/cta-section';
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Server Monitor';
 
 export const metadata: Metadata = {
   title: `${APP_NAME} — Silent Crash Monitor for Small SaaS`,

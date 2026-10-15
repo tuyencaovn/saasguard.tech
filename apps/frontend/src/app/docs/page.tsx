@@ -13,12 +13,12 @@ import {
   HardDrive,
 } from 'lucide-react';
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Server Monitor';
 
 export const metadata: Metadata = {
   title: `Docs | ${APP_NAME}`,
   description:
-    'Get started with SaaSGuard in minutes. Installation guide, setup, Telegram alerts, and troubleshooting.',
+    'Get started with Server Monitor in minutes. Installation guide, setup, Telegram alerts, and troubleshooting.',
 };
 
 function SectionHeading({
@@ -269,7 +269,7 @@ export default function DocsPage() {
                 <CodeBlock>{`https://api.telegram.org/botYOUR_TOKEN/getUpdates`}</CodeBlock>
                 <p>Find <code className="text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded text-xs">chat.id</code> in the response — that&apos;s your Chat ID.</p>
               </StepItem>
-              <StepItem step={3} title="Configure in SaaSGuard">
+              <StepItem step={3} title="Configure in Server Monitor">
                 <p>Go to <strong className="text-white/70">Settings → Notification Settings</strong> in your dashboard and paste your Bot Token and Chat ID. Or provide them during installation.</p>
               </StepItem>
             </div>
@@ -369,16 +369,16 @@ git pull && docker compose up -d --build`}</CodeBlock>
                   a: 'Verify your bot token and chat ID in Settings → Notification Settings. Make sure you\'ve sent at least one message to the bot before checking getUpdates.',
                 },
                 {
-                  q: 'How do I update SaaSGuard?',
+                  q: 'How do I update Server Monitor?',
                   a: 'Run: cd ~/saasguard && git pull && docker compose up -d --build. Your data is stored in PostgreSQL and persists across updates.',
                 },
                 {
-                  q: 'Does SaaSGuard send my data anywhere?',
-                  a: 'No. SaaSGuard is fully self-hosted. Your metrics and data never leave your server. There are no analytics or telemetry.',
+                  q: 'Does Server Monitor send my data anywhere?',
+                  a: 'No. Server Monitor is fully self-hosted. Your metrics and data never leave your server. There are no analytics or telemetry.',
                 },
                 {
                   q: 'Can I monitor multiple servers?',
-                  a: 'The Free tier monitors 1 server. Upgrade to Pro for unlimited servers. Each server needs its own SaaSGuard installation.',
+                  a: 'The Free tier monitors 1 server. Upgrade to Pro for unlimited servers. Each server needs its own Server Monitor installation.',
                 },
                 {
                   q: 'How do I reset my admin password?',

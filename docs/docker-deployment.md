@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-Deploy SaaSGuard on your own server using Docker Compose. The entire setup is automated with a single installation script.
+Deploy Server Monitor on your own server using Docker Compose. The entire setup is automated with a single installation script.
 
 ## Prerequisites
 

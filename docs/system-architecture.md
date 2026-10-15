@@ -1,4 +1,4 @@
-# System Architecture - SaaSGuard
+# System Architecture - Server Monitor
 
 **Version:** 2.1.0
 **Updated:** 2026-03-03
@@ -637,7 +637,7 @@ Docker Compose:
 
 ## Conclusion
 
-The SaaSGuard architecture follows a modular, event-driven design that prioritizes:
+The Server Monitor architecture follows a modular, event-driven design that prioritizes:
 1. **Real-time responsiveness** through WebSocket updates
 2. **Scalability** via event-driven processing
 3. **Security** with JWT and role-based access

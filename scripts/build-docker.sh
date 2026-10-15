@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build and optionally push SaaSGuard Docker images
+# Build and optionally push Server Monitor Docker images
 # Usage:
 #   ./scripts/build-docker.sh          # build only
 #   ./scripts/build-docker.sh --push   # build + push to GHCR
@@ -27,7 +27,7 @@ step() { echo -e "\n${CYAN}▸ $1${NC}"; }
 info() { echo -e "${GREEN}✓${NC} $1"; }
 
 echo ""
-echo -e "${CYAN}  SaaSGuard Docker Build${NC}"
+echo -e "${CYAN}  Server Monitor Docker Build${NC}"
 echo ""
 
 # Build backend

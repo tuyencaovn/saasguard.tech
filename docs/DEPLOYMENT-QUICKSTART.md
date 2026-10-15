@@ -1,4 +1,4 @@
-# SaaSGuard Docker Deployment — Quick Start
+# Server Monitor Docker Deployment — Quick Start
 
 ## 🚀 Deploy in 2 Steps
 

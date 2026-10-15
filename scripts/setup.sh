@@ -1,5 +1,5 @@
 #!/bin/bash
-# SaaSGuard — Local Development Setup
+# Server Monitor — Local Development Setup
 # Usage: ./scripts/setup.sh
 # Idempotent: safe to run multiple times
 
@@ -19,7 +19,7 @@ step()  { echo -e "\n${CYAN}▸ $1${NC}"; }
 error() { echo -e "${RED}✗${NC} $1"; exit 1; }
 
 echo ""
-echo -e "${CYAN}  SaaSGuard — Local Dev Setup${NC}"
+echo -e "${CYAN}  Server Monitor — Local Dev Setup${NC}"
 echo ""
 
 # ── Prerequisites ──────────────────────────────────────────────────────────

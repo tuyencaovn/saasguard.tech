@@ -4,7 +4,7 @@ import { Shield, Check, X } from 'lucide-react';
 import { PricingCard } from '@/components/landing/pricing-card';
 import { PRO_PRICE, PRO_STRIPE_LINK, TIER_LIMITS } from '@/lib/tier-limits';
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'SaaSGuard';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Server Monitor';
 
 export const metadata: Metadata = {
   title: `Pricing | ${APP_NAME}`,
@@ -52,7 +52,7 @@ const FAQS = [
     a: 'Yes. Run the install script on your server and use the Free tier indefinitely. No credit card required.',
   },
   {
-    q: 'How do I install SaaSGuard?',
+    q: 'How do I install Server Monitor?',
     a: 'One command: curl -s https://saasguard.tech/install.sh | bash — Docker and Docker Compose required.',
   },
   {
@@ -65,7 +65,7 @@ const FAQS = [
   },
   {
     q: 'Do you store my server metrics in the cloud?',
-    a: 'No. SaaSGuard runs entirely on your own server. Your metrics never leave your infrastructure.',
+    a: 'No. Server Monitor runs entirely on your own server. Your metrics never leave your infrastructure.',
   },
 ];
 
