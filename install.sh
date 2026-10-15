@@ -470,12 +470,21 @@ EOF
   else
     # No cert yet — obtain one. --nginx adds the 443 block + redirect and sets
     # up the auto-renewal timer.
-    if sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$admin_email" 2>/dev/null; then
+    # If the server has multiple Let's Encrypt accounts, --non-interactive can't
+    # pick one, so auto-select the first prod account and pass it explicitly.
+    local acct_flag="" acct_dir acct_id n
+    acct_dir="/etc/letsencrypt/accounts/acme-v02.api.letsencrypt.org/directory"
+    n=$(sudo sh -c "ls -d $acct_dir/*/ 2>/dev/null | wc -l" 2>/dev/null || echo 0)
+    if [ "$n" -gt 1 ]; then
+      acct_id=$(sudo sh -c "ls -d $acct_dir/*/ 2>/dev/null | head -1" | sed 's|/$||; s|.*/||')
+      [ -n "$acct_id" ] && acct_flag="--account $acct_id" \
+        && info "Multiple Let's Encrypt accounts — using $acct_id"
+    fi
+    if sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$admin_email" $acct_flag 2>/dev/null; then
       success "SSL certificate installed — HTTPS enabled with auto-renewal"
       SSL_OK=true
     else
       warn "Could not obtain SSL certificate automatically. Site is on HTTP for now."
-      warn "If the server has multiple Let's Encrypt accounts, certbot needs a manual choice."
       warn "Run it interactively:  sudo certbot --nginx -d $DOMAIN"
     fi
   fi
