@@ -11,6 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ADMIN_PW=""
 ADMIN_PW_GENERATED=false
 
+# Set true by setup_nginx when HTTPS is actually configured
+SSL_OK=false
+
 # --force / --reset: wipe the existing deployment (containers, DB volume, .env)
 # and install clean from scratch.
 FORCE=false
@@ -450,6 +453,7 @@ EOF
     # works even when multiple Let's Encrypt accounts are registered.
     if sudo certbot install --nginx --cert-name "$DOMAIN" --non-interactive --redirect 2>/dev/null; then
       success "Existing SSL certificate re-applied — HTTPS enabled"
+      SSL_OK=true
     else
       warn "Could not re-apply the existing certificate."
       warn "Run: sudo certbot install --nginx --cert-name $DOMAIN"
@@ -459,6 +463,7 @@ EOF
     # up the auto-renewal timer.
     if sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$admin_email" 2>/dev/null; then
       success "SSL certificate installed — HTTPS enabled with auto-renewal"
+      SSL_OK=true
     else
       warn "Could not obtain SSL certificate automatically. Site is on HTTP for now."
       warn "If the server has multiple Let's Encrypt accounts, certbot needs a manual choice."
@@ -530,7 +535,11 @@ print_summary() {
 
   if [ "$DEPLOY_MODE" = "domain" ]; then
     echo -e "  📍 ${BLUE}URL:${NC}      $FRONTEND_URL"
-    echo -e "  🔒 ${BLUE}SSL:${NC}      Enabled (via Let's Encrypt)"
+    if [ "$SSL_OK" = true ]; then
+      echo -e "  🔒 ${BLUE}SSL:${NC}      Enabled (via Let's Encrypt)"
+    else
+      echo -e "  ⚠️  ${YELLOW}SSL:${NC}      NOT set up — run: sudo certbot --nginx -d $DOMAIN"
+    fi
     echo -e "  🌐 ${BLUE}Proxy:${NC}     Nginx reverse proxy"
   else
     echo -e "  📍 ${BLUE}URL:${NC}      $FRONTEND_URL"
