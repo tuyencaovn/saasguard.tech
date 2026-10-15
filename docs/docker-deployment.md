@@ -22,7 +22,7 @@ The script will:
 1. Check prerequisites
 2. Download `docker-compose.prod.yml` and `.env.example` if missing (self-contained)
 3. Create `.env` and auto-generate secrets (database password, JWT secret, admin password)
-4. Prompt you to set only `ADMIN_EMAIL` and `FRONTEND_URL`
+4. Interactively ask for your admin email and domain/IP, then write them to `.env`
 5. Detect deployment mode (domain or IP) and auto-assign free host ports
 6. Setup Nginx + SSL (if domain mode)
 7. Pull Docker images from GitHub Container Registry

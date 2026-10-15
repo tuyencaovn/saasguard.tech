@@ -62,6 +62,23 @@ find_free_port() {
   echo "$port"
 }
 
+# Prompt the user on the terminal. Reads from /dev/tty so it works under
+# `curl ... | bash`. Usage: ask "Question" "default" -> echoes the answer.
+ask() {
+  local prompt=$1 default=$2 answer
+  if [ ! -e /dev/tty ]; then
+    echo "$default"
+    return
+  fi
+  if [ -n "$default" ]; then
+    read -rp "  $prompt [$default]: " answer < /dev/tty
+    echo "${answer:-$default}"
+  else
+    read -rp "  $prompt: " answer < /dev/tty
+    echo "$answer"
+  fi
+}
+
 # Generate a random alphanumeric secret of the given length (default 32).
 # Alphanumeric only — safe for sed replacement, env files, and URLs.
 gen_secret() {
@@ -142,6 +159,35 @@ generate_secrets() {
   fi
 }
 
+# Interactively collect the only two values the user must provide, then write
+# them into .env (overwriting the placeholders from .env.example).
+prompt_config() {
+  step "Enter your configuration"
+
+  local email domain url current
+  current=$(get_env_var ADMIN_EMAIL)
+  [ "$current" = "admin@example.com" ] && current=""
+  email=$(ask "Admin email (login + SSL registration)" "$current")
+  [ -z "$email" ] && error "Admin email is required"
+  set_env_var ADMIN_EMAIL "$email"
+
+  domain=$(ask "Domain or server IP (e.g. monitor.example.com)" "")
+  [ -z "$domain" ] && error "Domain or IP is required"
+
+  if [[ "$domain" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    local port
+    port=$(ask "Frontend port" "3006")
+    url="http://${domain}:${port}"
+  else
+    url="https://${domain}"
+  fi
+  set_env_var FRONTEND_URL "$url"
+
+  success "ADMIN_EMAIL  = $email"
+  success "FRONTEND_URL = $url"
+  info "Optional (SMTP, Telegram) can be edited in .env later"
+}
+
 # Load or create .env file
 setup_env() {
   if [ ! -f ".env" ]; then
@@ -161,20 +207,12 @@ setup_env() {
     NEW_ENV=false
   fi
 
-  # Fill secrets before the user edits — they only need ADMIN_EMAIL + FRONTEND_URL
+  # Secrets are filled automatically; the user is only prompted for the two
+  # values that cannot be guessed (admin email + domain/IP).
   generate_secrets
 
   if [ "$NEW_ENV" = true ]; then
-    warn "Secrets generated. Now set ADMIN_EMAIL and FRONTEND_URL in .env"
-
-    if [ -n "$EDITOR" ]; then
-      $EDITOR .env
-    elif command -v nano &> /dev/null; then
-      nano .env
-    else
-      info "Open .env in your editor and set ADMIN_EMAIL and FRONTEND_URL"
-      read -p "Press Enter once you've configured .env..."
-    fi
+    prompt_config
   fi
 }
 

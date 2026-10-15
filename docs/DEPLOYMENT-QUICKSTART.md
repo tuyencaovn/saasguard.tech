@@ -245,8 +245,8 @@ docker compose -f docker-compose.prod.yml exec db pg_isready -U server-monitor
 install.sh runs:
 
 1. Checks docker & docker compose v2
-2. Checks if .env exists → if not, copies .env.example & opens editor
-3. Auto-generates secrets + validates ADMIN_EMAIL & FRONTEND_URL are set
+2. Fetches docker-compose.prod.yml & .env.example if missing, creates .env
+3. Auto-generates secrets, then prompts for admin email + domain/IP → writes to .env
 4. Reads FRONTEND_URL → detects domain vs IP mode
 
 5. IF DOMAIN MODE:
