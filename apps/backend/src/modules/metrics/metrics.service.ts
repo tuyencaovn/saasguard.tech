@@ -3,8 +3,21 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThan } from 'typeorm';
 import * as si from 'systeminformation';
 import { MetricsHistory } from './entities/metrics-history.entity';
-import { MetricsDaily } from './entities/metrics-daily.entity';
+import { MetricsHourly } from './entities/metrics-hourly.entity';
 import { SystemMetrics, CpuMetrics, RamMetrics, DiskMetrics, UptimeMetrics, NetworkMetrics } from './types/metrics.types';
+
+// Shape returned by the aggregated-history endpoint (hourly or daily buckets)
+export interface AggregatedPoint {
+  bucket: string;
+  cpuAvg: number;
+  cpuMax: number;
+  ramAvg: number;
+  ramMax: number;
+  diskAvg: number;
+  diskMax: number;
+  networkRxAvg: number;
+  networkTxAvg: number;
+}
 
 @Injectable()
 export class MetricsService {
@@ -14,8 +27,8 @@ export class MetricsService {
   constructor(
     @InjectRepository(MetricsHistory)
     private readonly historyRepository: Repository<MetricsHistory>,
-    @InjectRepository(MetricsDaily)
-    private readonly dailyRepository: Repository<MetricsDaily>,
+    @InjectRepository(MetricsHourly)
+    private readonly hourlyRepository: Repository<MetricsHourly>,
   ) {}
 
   /**
@@ -182,19 +195,20 @@ export class MetricsService {
     return result.affected || 0;
   }
 
-  /**
-   * Aggregate one calendar day of raw history into a single daily rollup row.
-   * Idempotent: re-running upserts the same day. Skips days with no raw data.
-   */
-  async aggregateDay(date: Date): Promise<void> {
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+  private readonly round2 = (v: unknown) => Math.round((parseFloat(v as string) || 0) * 100) / 100;
 
-    const stats = await this.historyRepository
+  /**
+   * Rebuild hourly rollups for raw data in the last `hoursBack` hours.
+   * One GROUP BY per hour; idempotent upsert keyed by `hour`. Safe to run often
+   * (the current, still-filling hour simply gets re-upserted each pass).
+   */
+  async aggregateRecentHours(hoursBack = 3): Promise<number> {
+    const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+
+    const rows = await this.historyRepository
       .createQueryBuilder('h')
-      .select('AVG(h.cpuPercent)', 'cpuAvg')
+      .select("date_trunc('hour', h.timestamp)", 'hour')
+      .addSelect('AVG(h.cpuPercent)', 'cpuAvg')
       .addSelect('MAX(h.cpuPercent)', 'cpuMax')
       .addSelect('AVG(h.ramPercent)', 'ramAvg')
       .addSelect('MAX(h.ramPercent)', 'ramMax')
@@ -203,53 +217,76 @@ export class MetricsService {
       .addSelect('AVG(h.networkRx)', 'networkRxAvg')
       .addSelect('AVG(h.networkTx)', 'networkTxAvg')
       .addSelect('COUNT(*)', 'sampleCount')
-      .where('h.timestamp >= :start AND h.timestamp < :end', { start: dayStart, end: dayEnd })
-      .getRawOne();
+      .where('h.timestamp >= :since', { since })
+      .groupBy("date_trunc('hour', h.timestamp)")
+      .getRawMany();
 
-    const sampleCount = parseInt(stats.sampleCount, 10) || 0;
-    if (sampleCount === 0) return; // no raw data for this day
-
-    const dayKey = dayStart.toISOString().slice(0, 10); // YYYY-MM-DD
-    const round2 = (v: unknown) => Math.round((parseFloat(v as string) || 0) * 100) / 100;
-
-    const row = {
-      day: dayKey,
-      cpuAvg: round2(stats.cpuAvg),
-      cpuMax: round2(stats.cpuMax),
-      ramAvg: round2(stats.ramAvg),
-      ramMax: round2(stats.ramMax),
-      diskAvg: round2(stats.diskAvg),
-      diskMax: round2(stats.diskMax),
-      networkRxAvg: Math.round(parseFloat(stats.networkRxAvg) || 0),
-      networkTxAvg: Math.round(parseFloat(stats.networkTxAvg) || 0),
-      sampleCount,
-    };
-
-    await this.dailyRepository.upsert(row, ['day']);
+    for (const r of rows) {
+      await this.hourlyRepository.upsert(
+        {
+          hour: new Date(r.hour),
+          cpuAvg: this.round2(r.cpuAvg),
+          cpuMax: this.round2(r.cpuMax),
+          ramAvg: this.round2(r.ramAvg),
+          ramMax: this.round2(r.ramMax),
+          diskAvg: this.round2(r.diskAvg),
+          diskMax: this.round2(r.diskMax),
+          networkRxAvg: Math.round(parseFloat(r.networkRxAvg) || 0),
+          networkTxAvg: Math.round(parseFloat(r.networkTxAvg) || 0),
+          sampleCount: parseInt(r.sampleCount, 10) || 0,
+        },
+        ['hour'],
+      );
+    }
+    return rows.length;
   }
 
   /**
-   * Get daily rollup rows for the last N days (ascending).
+   * Aggregated history for charts. Returns hourly points for ranges up to 30
+   * days; for longer ranges it buckets the hourly rollups down to daily so the
+   * chart keeps a sane number of points. `bucket` is an ISO timestamp.
    */
-  async getDailyHistory(days = 30): Promise<MetricsDaily[]> {
+  async getAggregatedHistory(days = 30): Promise<AggregatedPoint[]> {
     const since = new Date();
     since.setDate(since.getDate() - days);
-    const sinceKey = since.toISOString().slice(0, 10);
-    return this.dailyRepository.find({
-      where: { day: MoreThan(sinceKey) },
-      order: { day: 'ASC' },
-    });
+    const grain = days > 30 ? 'day' : 'hour';
+
+    const rows = await this.hourlyRepository
+      .createQueryBuilder('m')
+      .select(`date_trunc('${grain}', m.hour)`, 'bucket')
+      .addSelect('AVG(m.cpuAvg)', 'cpuAvg')
+      .addSelect('MAX(m.cpuMax)', 'cpuMax')
+      .addSelect('AVG(m.ramAvg)', 'ramAvg')
+      .addSelect('MAX(m.ramMax)', 'ramMax')
+      .addSelect('AVG(m.diskAvg)', 'diskAvg')
+      .addSelect('MAX(m.diskMax)', 'diskMax')
+      .addSelect('AVG(m.networkRxAvg)', 'networkRxAvg')
+      .addSelect('AVG(m.networkTxAvg)', 'networkTxAvg')
+      .where('m.hour >= :since', { since })
+      .groupBy(`date_trunc('${grain}', m.hour)`)
+      .orderBy('bucket', 'ASC')
+      .getRawMany();
+
+    return rows.map((r) => ({
+      bucket: new Date(r.bucket).toISOString(),
+      cpuAvg: this.round2(r.cpuAvg),
+      cpuMax: this.round2(r.cpuMax),
+      ramAvg: this.round2(r.ramAvg),
+      ramMax: this.round2(r.ramMax),
+      diskAvg: this.round2(r.diskAvg),
+      diskMax: this.round2(r.diskMax),
+      networkRxAvg: Math.round(parseFloat(r.networkRxAvg) || 0),
+      networkTxAvg: Math.round(parseFloat(r.networkTxAvg) || 0),
+    }));
   }
 
   /**
-   * Cleanup daily rollups older than N days (default 1 year).
+   * Cleanup hourly rollups older than N days (default 1 year).
    */
-  async cleanupOldDaily(days = 365): Promise<number> {
-    const retentionDate = new Date();
-    retentionDate.setDate(retentionDate.getDate() - days);
-    const cutoff = retentionDate.toISOString().slice(0, 10);
-
-    const result = await this.dailyRepository.delete({ day: LessThan(cutoff) });
+  async cleanupOldHourly(days = 365): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const result = await this.hourlyRepository.delete({ hour: LessThan(cutoff) });
     return result.affected || 0;
   }
 }

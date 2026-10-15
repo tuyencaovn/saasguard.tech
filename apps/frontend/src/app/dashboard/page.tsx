@@ -90,24 +90,25 @@ async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsD
   }
 }
 
-// Fetch daily rollup history (long ranges). Uses per-day average values.
-async function fetchDailyHistory(days: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
+// Fetch aggregated history (long ranges). Backend returns hourly buckets up to
+// 30 days and daily buckets beyond that; each point uses average values.
+async function fetchAggregatedHistory(days: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/metrics/history/daily?days=${days}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/metrics/history/aggregated?days=${days}`);
     if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
     const data = await res.json();
-    const metrics = data.map((item: { day: string; cpuAvg: number; ramAvg: number; diskAvg: number }) => ({
-      timestamp: new Date(item.day).getTime(),
+    const metrics = data.map((item: { bucket: string; cpuAvg: number; ramAvg: number; diskAvg: number }) => ({
+      timestamp: new Date(item.bucket).getTime(),
       cpu: Number(item.cpuAvg),
       ram: Number(item.ramAvg),
       disk: Number(item.diskAvg),
     }));
-    const network = data.map((item: { day: string; networkRxAvg?: number; networkTxAvg?: number }) => ({
-      timestamp: new Date(item.day).getTime(),
+    const network = data.map((item: { bucket: string; networkRxAvg?: number; networkTxAvg?: number }) => ({
+      timestamp: new Date(item.bucket).getTime(),
       rx: Number(item.networkRxAvg || 0),
       tx: Number(item.networkTxAvg || 0),
     }));
-    // Daily rollups don't store link speed — return empty series.
+    // Rollups don't store link speed — return empty series.
     return { metrics, network, linkSpeed: [] };
   } catch {
     return { metrics: [], network: [], linkSpeed: [] };
@@ -134,7 +135,7 @@ export default function DashboardPage() {
 
     const config = TIME_RANGE_CONFIG[timeRange];
     const loader = config.source === 'daily'
-      ? fetchDailyHistory(config.days ?? 30)
+      ? fetchAggregatedHistory(config.days ?? 30)
       : fetchMetricsHistory(config.minutes ?? 60);
     loader.then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
       setMetricsHistory(metricsData);
