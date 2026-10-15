@@ -439,30 +439,52 @@ EOF
     error "Nginx config test failed"
   fi
 
-  # Setup SSL with Certbot — --nginx installs the cert into nginx AND adds the
-  # 443 server block; --redirect forces HTTP → HTTPS. Certbot also installs a
-  # systemd timer for automatic renewal.
+  # Setup SSL with Certbot.
   step "Setting up SSL with Let's Encrypt"
   local admin_email
   admin_email=$(get_env_var ADMIN_EMAIL)
 
-  if sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$admin_email"; then
-    success "SSL certificate installed — HTTPS enabled with auto-renewal"
+  if sudo test -d "/etc/letsencrypt/live/$DOMAIN"; then
+    # A cert already exists — just install it into the new nginx config.
+    # `certbot install` performs no ACME request, so it needs no account and
+    # works even when multiple Let's Encrypt accounts are registered.
+    if sudo certbot install --nginx --cert-name "$DOMAIN" --non-interactive --redirect 2>/dev/null; then
+      success "Existing SSL certificate re-applied — HTTPS enabled"
+    else
+      warn "Could not re-apply the existing certificate."
+      warn "Run: sudo certbot install --nginx --cert-name $DOMAIN"
+    fi
   else
-    warn "Could not obtain SSL certificate. Site is running on HTTP for now."
-    warn "Retry later with: sudo certbot --nginx -d $DOMAIN"
+    # No cert yet — obtain one. --nginx adds the 443 block + redirect and sets
+    # up the auto-renewal timer.
+    if sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$admin_email" 2>/dev/null; then
+      success "SSL certificate installed — HTTPS enabled with auto-renewal"
+    else
+      warn "Could not obtain SSL certificate automatically. Site is on HTTP for now."
+      warn "If the server has multiple Let's Encrypt accounts, certbot needs a manual choice."
+      warn "Run it interactively:  sudo certbot --nginx -d $DOMAIN"
+    fi
   fi
 }
 
-# Pull docker images
+# Pull docker images (retries — registries occasionally time out)
 pull_images() {
-  step "Pulling Docker images from GitHub Container Registry"
+  step "Pulling Docker images"
 
-  if ! docker compose -f docker-compose.prod.yml pull; then
-    error "Failed to pull images. Check your internet connection and Docker credentials."
-  fi
+  local attempt=1 max=3
+  while [ "$attempt" -le "$max" ]; do
+    if docker compose -f docker-compose.prod.yml pull; then
+      success "Images pulled successfully"
+      return
+    fi
+    if [ "$attempt" -lt "$max" ]; then
+      warn "Pull failed (attempt $attempt/$max) — retrying in 5s..."
+      sleep 5
+    fi
+    attempt=$((attempt + 1))
+  done
 
-  success "Images pulled successfully"
+  error "Failed to pull images after $max attempts. Check network/registry, then retry: docker compose -f docker-compose.prod.yml up -d"
 }
 
 # Start services
