@@ -45,7 +45,7 @@ export class PasskeyCredential {
   @Column({ name: 'backed_up', default: false })
   backedUp: boolean;
 
-  @Column({ name: 'device_type', nullable: true })
+  @Column({ name: 'device_type', type: 'varchar', nullable: true })
   deviceType: string | null;
 
   @Column()
