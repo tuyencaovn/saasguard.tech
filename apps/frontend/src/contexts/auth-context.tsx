@@ -24,7 +24,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  loginWithPasskey: (email: string) => Promise<void>;
+  loginWithPasskey: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -80,8 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const loginWithPasskey = async (email: string) => {
-    const user = await loginWithPasskeyRequest(email);
+  const loginWithPasskey = async () => {
+    const user = await loginWithPasskeyRequest();
     setUser(user);
   };
 

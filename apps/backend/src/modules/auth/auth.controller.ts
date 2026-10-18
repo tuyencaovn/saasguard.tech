@@ -8,7 +8,6 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import {
-  WebAuthnLoginOptionsDto,
   WebAuthnLoginVerifyDto,
   WebAuthnRegisterVerifyDto,
 } from './dto/webauthn.dto';
@@ -132,9 +131,9 @@ export class AuthController {
   @Public()
   @Post('webauthn/login/options')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
-  async webAuthnLoginOptions(@Body() dto: WebAuthnLoginOptionsDto) {
-    return this.webAuthnService.getLoginOptions(dto.email);
+  @Throttle({ default: { limit: 10, ttl: 900000 } }) // 10 attempts per 15 minutes
+  async webAuthnLoginOptions() {
+    return this.webAuthnService.getLoginOptions();
   }
 
   @Public()

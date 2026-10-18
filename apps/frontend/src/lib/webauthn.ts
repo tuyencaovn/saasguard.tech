@@ -50,18 +50,17 @@ export async function registerPasskey(name: string): Promise<void> {
   }
 }
 
-/** Authenticate with a passkey (email-first) and return the signed-in user. */
-export async function loginWithPasskeyRequest(email: string): Promise<User> {
+/**
+ * Authenticate with a discoverable passkey (usernameless) and return the
+ * signed-in user. The browser lets the user pick from passkeys stored for
+ * this site — no email needed.
+ */
+export async function loginWithPasskeyRequest(): Promise<User> {
   const optionsRes = await fetch(`${API_URL}/auth/webauthn/login/options`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ email }),
   });
   if (!optionsRes.ok) {
-    if (optionsRes.status === 404) {
-      throw new Error('No passkey found for this account');
-    }
     if (optionsRes.status === 429) {
       throw new Error('Too many attempts. Please try again in 15 minutes.');
     }
@@ -75,7 +74,7 @@ export async function loginWithPasskeyRequest(email: string): Promise<User> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ email, response }),
+    body: JSON.stringify({ response }),
   });
   if (!verifyRes.ok) {
     await parseError(verifyRes, 'Passkey authentication failed');

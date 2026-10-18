@@ -68,7 +68,7 @@ export class WebAuthnService {
         transports: c.transports ?? undefined,
       })),
       authenticatorSelection: {
-        residentKey: 'preferred',
+        residentKey: 'required',
         userVerification: 'preferred',
       },
     });
@@ -132,54 +132,40 @@ export class WebAuthnService {
     }
   }
 
-  async getLoginOptions(email: string) {
-    const user = await this.usersService.findByEmail(email);
-    const credentials = user
-      ? await this.credentialRepo.find({ where: { userId: user.id } })
-      : [];
-
-    if (!user || !user.isActive || credentials.length === 0) {
-      throw new NotFoundException('No passkey found for this account');
-    }
-
+  async getLoginOptions() {
+    // Usernameless / discoverable: no allowCredentials, so the authenticator
+    // offers any resident passkey it holds for this relying party.
     const options = await generateAuthenticationOptions({
       rpID: this.rpID,
-      allowCredentials: credentials.map((c) => ({
-        id: c.credentialId,
-        transports: c.transports ?? undefined,
-      })),
       userVerification: 'preferred',
     });
 
-    this.challengeStore.set(`auth:${email.toLowerCase()}`, options.challenge);
+    this.challengeStore.set(`auth:${options.challenge}`, options.challenge);
     return options;
   }
 
   async verifyLogin(dto: WebAuthnLoginVerifyDto) {
-    const user = await this.usersService.findByEmail(dto.email);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('Passkey authentication failed');
-    }
-
+    // The authenticator tells us which credential signed; resolve its owner.
     const credential = await this.credentialRepo.findOne({
-      where: { credentialId: dto.response.id, userId: user.id },
+      where: { credentialId: dto.response.id },
     });
     if (!credential) {
       throw new UnauthorizedException('Passkey authentication failed');
     }
 
-    const expectedChallenge = this.challengeStore.consume(
-      `auth:${dto.email.toLowerCase()}`,
-    );
-    if (!expectedChallenge) {
-      throw new BadRequestException(
-        'Authentication challenge expired, please try again',
-      );
+    const user = await this.usersService
+      .findOne(credential.userId)
+      .catch(() => null);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Passkey authentication failed');
     }
 
     const verification = await verifyAuthenticationResponse({
       response: dto.response,
-      expectedChallenge,
+      // One-time challenge: the store only holds challenges we issued, and
+      // consume() removes it, so a captured response cannot be replayed.
+      expectedChallenge: (challenge) =>
+        this.challengeStore.consume(`auth:${challenge}`) !== null,
       expectedOrigin: this.frontendUrl,
       expectedRPID: this.rpID,
       credential: {

@@ -61,13 +61,9 @@ export default function LoginPage() {
 
   const handlePasskeyLogin = async () => {
     setError('');
-    if (!email) {
-      setError('Enter your email first, then sign in with your passkey.');
-      return;
-    }
     setPasskeyLoading(true);
     try {
-      await loginWithPasskey(email);
+      await loginWithPasskey();
       router.push('/');
     } catch (err) {
       // Browser cancellation / no credential selected

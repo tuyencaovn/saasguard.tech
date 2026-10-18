@@ -353,19 +353,23 @@ Registration (logged-in user, in Settings):
 2. Browser creates a passkey
 3. POST /auth/webauthn/register/verify    → stored in passkey_credentials
 
-Login (email-first, public):
-1. POST /auth/webauthn/login/options {email} → options (404 if no passkey)
-2. Browser signs the challenge
-3. POST /auth/webauthn/login/verify {email,response} → sets access_token cookie
+Login (usernameless / discoverable, public):
+1. POST /auth/webauthn/login/options → options (no allowCredentials)
+2. Browser lets the user pick a resident passkey and signs the challenge
+3. POST /auth/webauthn/login/verify {response} → owner resolved from the
+   credential id, then access_token cookie is set
 ```
 
 - `credentialId`, `publicKey`, `counter`, `transports`, `name` persisted per
   credential; `counter`/`lastUsedAt` updated on each login (replay defense).
 - Relying-party ID and origin are derived from `FRONTEND_URL`; display name
   from `WEBAUTHN_RP_NAME` (defaults to `APP_NAME`).
-- Challenges held in an in-memory store (60s TTL) — valid because the backend
-  runs single-instance; move to DB/Redis if scaled horizontally.
-- `login/options` + `login/verify` are rate-limited (5 / 15 min).
+- Registration uses `residentKey: 'required'` so passkeys are discoverable,
+  enabling usernameless login.
+- Challenges held in an in-memory store (60s TTL, keyed by the challenge value
+  and consumed once → replay-safe) — valid because the backend runs
+  single-instance; move to DB/Redis if scaled horizontally.
+- `login/options` + `login/verify` are rate-limited.
 
 ---
 

@@ -43,7 +43,7 @@ describe('WebAuthnService', () => {
     save: jest.Mock;
     delete: jest.Mock;
   };
-  let usersService: { findByEmail: jest.Mock };
+  let usersService: { findByEmail: jest.Mock; findOne: jest.Mock };
   let authService: { buildAuthResult: jest.Mock };
   let challengeStore: { set: jest.Mock; consume: jest.Mock };
 
@@ -62,7 +62,7 @@ describe('WebAuthnService', () => {
       save: jest.fn((v) => Promise.resolve({ id: 'cred-1', ...v })),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };
-    usersService = { findByEmail: jest.fn() };
+    usersService = { findByEmail: jest.fn(), findOne: jest.fn() };
     authService = { buildAuthResult: jest.fn() };
     challengeStore = { set: jest.fn(), consume: jest.fn() };
 
@@ -134,46 +134,26 @@ describe('WebAuthnService', () => {
   });
 
   describe('getLoginOptions', () => {
-    it('throws NotFound when the user has no passkeys', async () => {
-      usersService.findByEmail.mockResolvedValue(activeUser);
-      repo.find.mockResolvedValue([]);
-      await expect(
-        service.getLoginOptions('admin@example.com'),
-      ).rejects.toBeInstanceOf(NotFoundException);
-    });
-
-    it('throws NotFound for unknown/inactive account (no enumeration)', async () => {
-      usersService.findByEmail.mockResolvedValue(null);
-      await expect(
-        service.getLoginOptions('ghost@example.com'),
-      ).rejects.toBeInstanceOf(NotFoundException);
-    });
-
-    it('returns options and stores the challenge', async () => {
-      usersService.findByEmail.mockResolvedValue(activeUser);
-      repo.find.mockResolvedValue([
-        { credentialId: 'c1', transports: ['internal'] },
-      ]);
+    it('returns usernameless options (no allowCredentials) and stores the challenge', async () => {
       mockGenAuth.mockResolvedValue({ challenge: 'auth-challenge' });
 
-      const options = await service.getLoginOptions('Admin@Example.com');
+      const options = await service.getLoginOptions();
 
       expect(options).toEqual({ challenge: 'auth-challenge' });
+      expect(mockGenAuth).toHaveBeenCalledWith(
+        expect.not.objectContaining({ allowCredentials: expect.anything() }),
+      );
       expect(challengeStore.set).toHaveBeenCalledWith(
-        'auth:admin@example.com',
+        'auth:auth-challenge',
         'auth-challenge',
       );
     });
   });
 
   describe('verifyLogin', () => {
-    const dto = {
-      email: 'admin@example.com',
-      response: { id: 'c1' } as never,
-    };
+    const dto = { response: { id: 'c1' } as never };
 
-    it('updates counter + lastUsedAt and returns an auth result', async () => {
-      usersService.findByEmail.mockResolvedValue(activeUser);
+    it('resolves the owner from the credential, updates counter + lastUsedAt', async () => {
       repo.findOne.mockResolvedValue({
         credentialId: 'c1',
         userId: 'user-1',
@@ -181,7 +161,7 @@ describe('WebAuthnService', () => {
         counter: 1,
         transports: ['internal'],
       });
-      challengeStore.consume.mockReturnValue('auth-challenge');
+      usersService.findOne.mockResolvedValue(activeUser);
       mockVerifyAuth.mockResolvedValue({
         verified: true,
         authenticationInfo: { newCounter: 2 },
@@ -200,18 +180,39 @@ describe('WebAuthnService', () => {
       expect(result).toEqual({ accessToken: 'jwt', user: activeUser });
     });
 
-    it('rejects when the challenge is missing', async () => {
-      usersService.findByEmail.mockResolvedValue(activeUser);
-      repo.findOne.mockResolvedValue({ credentialId: 'c1', userId: 'user-1' });
-      challengeStore.consume.mockReturnValue(null);
+    it('consumes the challenge one-time via expectedChallenge callback', async () => {
+      repo.findOne.mockResolvedValue({
+        credentialId: 'c1',
+        userId: 'user-1',
+        publicKey: 'pk',
+        counter: 0,
+        transports: null,
+      });
+      usersService.findOne.mockResolvedValue(activeUser);
+      challengeStore.consume.mockReturnValue('the-challenge');
+      mockVerifyAuth.mockResolvedValue({
+        verified: true,
+        authenticationInfo: { newCounter: 1 },
+      });
+      authService.buildAuthResult.mockReturnValue({ accessToken: 'x', user: activeUser });
+
+      await service.verifyLogin(dto);
+
+      const opts = mockVerifyAuth.mock.calls[0][0];
+      expect(opts.expectedChallenge('the-challenge')).toBe(true);
+      expect(challengeStore.consume).toHaveBeenCalledWith('auth:the-challenge');
+    });
+
+    it('rejects when no credential matches the authenticator', async () => {
+      repo.findOne.mockResolvedValue(null);
       await expect(service.verifyLogin(dto)).rejects.toBeInstanceOf(
-        BadRequestException,
+        UnauthorizedException,
       );
     });
 
-    it('rejects when no matching credential belongs to the user', async () => {
-      usersService.findByEmail.mockResolvedValue(activeUser);
-      repo.findOne.mockResolvedValue(null);
+    it('rejects when the credential owner is missing/inactive', async () => {
+      repo.findOne.mockResolvedValue({ credentialId: 'c1', userId: 'user-1' });
+      usersService.findOne.mockRejectedValue(new NotFoundException());
       await expect(service.verifyLogin(dto)).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
