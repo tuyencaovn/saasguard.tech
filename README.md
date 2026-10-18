@@ -12,7 +12,7 @@ Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted befo
 - **Docker Monitoring**: Container status, events, Start/Stop/Restart, logs
 - **PM2 Monitoring**: Process management, CPU/Memory stats, Start/Stop/Restart, logs
 - **Alert System**: Email (SendGrid) & Telegram notifications
-- **User Authentication**: JWT-based auth with role management (Admin/Viewer)
+- **User Authentication**: JWT-based auth with role management (Admin/Viewer), plus passkey (WebAuthn) login
 
 ## Tech Stack
 

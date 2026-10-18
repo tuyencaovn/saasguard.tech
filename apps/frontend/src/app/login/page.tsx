@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import { browserSupportsWebAuthn } from '@/lib/webauthn';
 import { APP_SHORT_NAME } from '@/config/brand';
 import {
   Server,
@@ -19,6 +20,7 @@ import {
   Database,
   Box,
   Shield,
+  Fingerprint,
 } from 'lucide-react';
 
 // Docker icon SVG
@@ -30,11 +32,17 @@ const DockerIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, loginWithPasskey, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeySupported, setPasskeySupported] = useState(false);
+
+  useEffect(() => {
+    setPasskeySupported(browserSupportsWebAuthn());
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +56,28 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setError('');
+    if (!email) {
+      setError('Enter your email first, then sign in with your passkey.');
+      return;
+    }
+    setPasskeyLoading(true);
+    try {
+      await loginWithPasskey(email);
+      router.push('/');
+    } catch (err) {
+      // Browser cancellation / no credential selected
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setError('Passkey prompt was cancelled.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Passkey login failed');
+      }
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -406,6 +436,35 @@ export default function LoginPage() {
                     'Sign in'
                   )}
                 </button>
+
+                {passkeySupported && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-white/10" />
+                      <span className="text-xs text-white/30">or</span>
+                      <div className="h-px flex-1 bg-white/10" />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handlePasskeyLogin}
+                      disabled={passkeyLoading || isSubmitting}
+                      className="w-full py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    >
+                      {passkeyLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Authenticating...
+                        </>
+                      ) : (
+                        <>
+                          <Fingerprint className="h-4 w-4" />
+                          Sign in with passkey
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
               </form>
             </div>
 

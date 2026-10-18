@@ -1,11 +1,17 @@
-import { Controller, Post, Body, Res, Get, Query, HttpCode, HttpStatus, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Res, Get, Query, HttpCode, HttpStatus, Patch, Delete, Param } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
+import { WebAuthnService } from './webauthn.service';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import {
+  WebAuthnLoginOptionsDto,
+  WebAuthnLoginVerifyDto,
+  WebAuthnRegisterVerifyDto,
+} from './dto/webauthn.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { CurrentUserData } from './decorators/current-user.decorator';
@@ -20,7 +26,10 @@ const COOKIE_OPTIONS = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly webAuthnService: WebAuthnService,
+  ) {}
 
   /**
    * Login endpoint with strict rate limiting to prevent brute force attacks
@@ -102,5 +111,56 @@ export class AuthController {
     @Body() dto: ChangePasswordDto,
   ) {
     return this.authService.changePassword(user.id, dto);
+  }
+
+  // ===== Passkey (WebAuthn) =====
+
+  @Get('webauthn/register/options')
+  async webAuthnRegisterOptions(@CurrentUser() user: CurrentUserData) {
+    return this.webAuthnService.getRegistrationOptions(user);
+  }
+
+  @Post('webauthn/register/verify')
+  @HttpCode(HttpStatus.OK)
+  async webAuthnRegisterVerify(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: WebAuthnRegisterVerifyDto,
+  ) {
+    return this.webAuthnService.verifyRegistration(user, dto);
+  }
+
+  @Public()
+  @Post('webauthn/login/options')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
+  async webAuthnLoginOptions(@Body() dto: WebAuthnLoginOptionsDto) {
+    return this.webAuthnService.getLoginOptions(dto.email);
+  }
+
+  @Public()
+  @Post('webauthn/login/verify')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 attempts per 15 minutes
+  async webAuthnLoginVerify(
+    @Body() dto: WebAuthnLoginVerifyDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, user } = await this.webAuthnService.verifyLogin(dto);
+    response.cookie('access_token', accessToken, COOKIE_OPTIONS);
+    return { user };
+  }
+
+  @Get('webauthn/credentials')
+  async webAuthnListCredentials(@CurrentUser() user: CurrentUserData) {
+    return this.webAuthnService.listCredentials(user.id);
+  }
+
+  @Delete('webauthn/credentials/:id')
+  @HttpCode(HttpStatus.OK)
+  async webAuthnDeleteCredential(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id') id: string,
+  ) {
+    return this.webAuthnService.deleteCredential(user.id, id);
   }
 }

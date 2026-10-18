@@ -47,6 +47,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    return this.buildAuthResult(user);
+  }
+
+  buildAuthResult(user: {
+    id: string;
+    email: string;
+    role: string;
+  }): { accessToken: string; user: { id: string; email: string; role: string } } {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,

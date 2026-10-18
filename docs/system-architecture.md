@@ -342,6 +342,31 @@ PM2Scheduler (every 5 seconds)
 - Admin: Full access (create thresholds, manage users)
 - Viewer: Read-only access
 
+**Passkey (WebAuthn) Login:**
+
+Additive, alongside password login. Built on `@simplewebauthn/server`
+(backend) and `@simplewebauthn/browser` (frontend).
+
+```
+Registration (logged-in user, in Settings):
+1. GET  /auth/webauthn/register/options  → challenge + options
+2. Browser creates a passkey
+3. POST /auth/webauthn/register/verify    → stored in passkey_credentials
+
+Login (email-first, public):
+1. POST /auth/webauthn/login/options {email} → options (404 if no passkey)
+2. Browser signs the challenge
+3. POST /auth/webauthn/login/verify {email,response} → sets access_token cookie
+```
+
+- `credentialId`, `publicKey`, `counter`, `transports`, `name` persisted per
+  credential; `counter`/`lastUsedAt` updated on each login (replay defense).
+- Relying-party ID and origin are derived from `FRONTEND_URL`; display name
+  from `WEBAUTHN_RP_NAME` (defaults to `APP_NAME`).
+- Challenges held in an in-memory store (60s TTL) — valid because the backend
+  runs single-instance; move to DB/Redis if scaled horizontally.
+- `login/options` + `login/verify` are rate-limited (5 / 15 min).
+
 ---
 
 ### 7. Users Module

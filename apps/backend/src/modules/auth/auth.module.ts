@@ -5,15 +5,18 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { WebAuthnService } from './webauthn.service';
+import { WebAuthnChallengeStore } from './webauthn-challenge.store';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PasswordReset } from './entities/password-reset.entity';
+import { PasskeyCredential } from './entities/passkey-credential.entity';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PasswordReset]),
+    TypeOrmModule.forFeature([PasswordReset, PasskeyCredential]),
     UsersModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
@@ -31,7 +34,14 @@ import { UsersModule } from '../users/users.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
+  providers: [
+    AuthService,
+    WebAuthnService,
+    WebAuthnChallengeStore,
+    JwtStrategy,
+    JwtAuthGuard,
+    RolesGuard,
+  ],
   exports: [AuthService, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

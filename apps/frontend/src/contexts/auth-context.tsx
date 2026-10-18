@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { loginWithPasskeyRequest } from '@/lib/webauthn';
 
 export type UserRole = 'admin' | 'viewer';
 
@@ -23,6 +24,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithPasskey: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -78,6 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const loginWithPasskey = async (email: string) => {
+    const user = await loginWithPasskeyRequest(email);
+    setUser(user);
+  };
+
   const logout = async () => {
     await fetch(`${API_URL}/auth/logout`, {
       method: 'POST',
@@ -93,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginWithPasskey,
         logout,
         refreshUser,
       }}
