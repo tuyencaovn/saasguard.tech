@@ -331,6 +331,9 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* Infrastructure status — admin only */}
+          {isAdmin && (
+          <>
           {/* System Card */}
           <div className="glass-card rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -511,6 +514,8 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* Configure Notifications Card - Admin Only */}
           {isAdmin && (
