@@ -316,6 +316,8 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 ### Database Backup
+
+**Full database** (everything, including metrics history) via `pg_dump`:
 ```bash
 # Backup PostgreSQL
 docker compose -f docker-compose.prod.yml exec db pg_dump -U server-monitor server-monitor > backup.sql
@@ -323,6 +325,14 @@ docker compose -f docker-compose.prod.yml exec db pg_dump -U server-monitor serv
 # Restore from backup
 docker compose -f docker-compose.prod.yml exec -T db psql -U server-monitor server-monitor < backup.sql
 ```
+
+**Users & settings only** (admin, from the dashboard): **Settings → Backup &
+Restore**. *Download backup* exports users, alert rules, SSL monitors,
+notification settings, and passkeys to a JSON file; *Restore from file* **replaces**
+those tables with the uploaded backup (transactional — all-or-nothing). Transient
+data (metrics history, alert logs) is not included. The file contains password
+hashes, the SMTP password, and the Telegram token — store it securely. Restore is
+refused if the backup has no admin user.
 
 ### Resize Container Memory Limits
 Edit `docker-compose.prod.yml` and add resource limits:

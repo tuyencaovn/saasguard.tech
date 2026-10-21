@@ -20,6 +20,7 @@ import { EmailModule } from './modules/email/email.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { NotificationSettingsModule } from './modules/notification-settings/notification-settings.module';
 import { UpdatesModule } from './modules/updates/updates.module';
+import { BackupModule } from './modules/backup/backup.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 
@@ -68,6 +69,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     PM2Module,
     SslModule,
     UpdatesModule,
+    BackupModule,
     GatewaysModule,
   ],
   controllers: [AppController],

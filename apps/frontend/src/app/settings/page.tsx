@@ -27,6 +27,7 @@ import {
   Plus,
   Download,
   RotateCcw,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -93,6 +94,11 @@ export default function SettingsPage() {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
+
+  const [backingUp, setBackingUp] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [backupMsg, setBackupMsg] = useState('');
+  const [backupError, setBackupError] = useState('');
 
   useEffect(() => {
     fetchStatus();
@@ -206,6 +212,75 @@ export default function SettingsPage() {
     } catch (e) {
       setUpdating(false);
       setUpdateError(e instanceof Error ? e.message : 'Update failed to start');
+    }
+  };
+
+  const handleBackup = async () => {
+    setBackupError('');
+    setBackupMsg('');
+    setBackingUp(true);
+    try {
+      const res = await fetch(`${API_URL}/backup/export`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Backup failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saasguard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setBackupMsg('Backup downloaded — keep it safe, it contains secrets.');
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : 'Backup failed');
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // let the same file be picked again
+    if (!file) return;
+    if (
+      !window.confirm(
+        'Restore REPLACES all users and settings with the backup. Current data in those tables is deleted and you may be logged out. Continue?',
+      )
+    ) {
+      return;
+    }
+    setBackupError('');
+    setBackupMsg('');
+    setRestoring(true);
+    try {
+      let payload: unknown;
+      try {
+        payload = JSON.parse(await file.text());
+      } catch {
+        throw new Error('File is not valid JSON');
+      }
+      const res = await fetch(`${API_URL}/backup/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = Array.isArray(body.message) ? body.message.join(', ') : body.message;
+        throw new Error(msg || 'Restore failed');
+      }
+      const counts = body.restored
+        ? Object.entries(body.restored)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ')
+        : '';
+      setBackupMsg(`Restored (${counts}). Log in again if your session ends.`);
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : 'Restore failed');
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -482,6 +557,55 @@ export default function SettingsPage() {
                   )}
               </div>
             )}
+          </div>
+
+          {/* Backup & Restore Card */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20 flex items-center justify-center">
+                <HardDrive className="w-5 h-5 text-indigo-400" />
+              </div>
+              <h2 className="text-lg font-semibold">Backup &amp; Restore</h2>
+            </div>
+            <p className="text-white/50 text-sm mb-4">
+              Users, alert rules, SSL monitors, notifications &amp; passkeys. The file
+              contains secrets — store it securely.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleBackup}
+                disabled={backingUp}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30 transition-all text-sm font-medium disabled:opacity-50"
+              >
+                {backingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Download backup
+              </button>
+
+              <label
+                className={cn(
+                  'w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-all text-sm cursor-pointer',
+                  restoring && 'opacity-50 pointer-events-none',
+                )}
+              >
+                {restoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {restoring ? 'Restoring…' : 'Restore from file'}
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={handleRestoreFile}
+                  disabled={restoring}
+                />
+              </label>
+
+              <p className="inline-flex items-start gap-1.5 text-xs text-amber-400/90">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                Restore replaces all users &amp; settings with the backup.
+              </p>
+
+              {backupMsg && <p className="text-xs text-emerald-400/90">{backupMsg}</p>}
+              {backupError && <p className="text-xs text-red-400">{backupError}</p>}
+            </div>
           </div>
 
           {/* Database Card */}

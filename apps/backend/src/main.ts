@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -7,7 +8,10 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Allow larger JSON bodies so backup restore uploads aren't rejected.
+  app.useBodyParser('json', { limit: '25mb' });
 
   // Security: Fail fast if JWT_SECRET not set in production
   if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
