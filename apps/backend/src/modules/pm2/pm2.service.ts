@@ -1,5 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { execFile } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import pm2 from 'pm2';
 import { PM2ProcessInfo } from './types/pm2.types';
 
@@ -142,13 +145,24 @@ export class PM2Service implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  // describe() returns host-absolute log paths. In the container the host root
+  // is mounted read-only at /hostfs, so resolving through it reaches logs
+  // anywhere the process writes them (e.g. /var/log/pm2), not just the mounted
+  // PM2_HOME. Falls back to the raw path when running outside a container.
+  private resolveHostPath(p: string): string {
+    if (existsSync('/hostfs') && !p.startsWith('/hostfs')) {
+      const viaHostfs = join('/hostfs', p);
+      if (existsSync(viaHostfs)) return viaHostfs;
+    }
+    return p;
+  }
+
   async getProcessLogs(idOrName: number | string, lines = 100): Promise<string> {
     if (!this.connected) {
       throw new Error('PM2 not connected');
     }
 
-    // PM2 doesn't have a direct programmatic API for logs
-    // We'll read from the log files directly
+    // PM2 has no programmatic log API — read the process's log files directly.
     return new Promise((resolve) => {
       pm2.describe(idOrName, (err, desc) => {
         if (err || !desc || desc.length === 0) {
@@ -156,22 +170,24 @@ export class PM2Service implements OnModuleInit, OnModuleDestroy {
           return;
         }
 
-        const proc = desc[0];
-        const pm2Env = proc.pm2_env || {};
-        const outLogPath = pm2Env.pm_out_log_path;
-        const errLogPath = pm2Env.pm_err_log_path;
+        const pm2Env = desc[0].pm2_env || {};
+        // Resolve each path and keep only files that actually exist, so a
+        // missing error log never makes tail fail the whole read.
+        const logPaths = [pm2Env.pm_out_log_path, pm2Env.pm_err_log_path]
+          .filter(Boolean)
+          .map((p) => this.resolveHostPath(p as string))
+          .filter((p) => existsSync(p));
 
-        // Read logs using tail command
-        const { exec } = require('child_process');
-        const logPaths = [outLogPath, errLogPath].filter(Boolean).join(' ');
-
-        if (!logPaths) {
-          resolve('No log files found');
+        if (logPaths.length === 0) {
+          resolve('No readable log files found');
           return;
         }
 
-        exec(`tail -n ${lines} ${logPaths} 2>/dev/null`, (error: any, stdout: string) => {
+        // execFile with an argv array — no shell, so paths with spaces or odd
+        // characters can't break or inject.
+        execFile('tail', ['-n', String(lines), ...logPaths], (error, stdout) => {
           if (error) {
+            this.logger.warn(`Failed to read logs for ${idOrName}: ${error.message}`);
             resolve('Failed to read logs');
           } else {
             resolve(stdout || 'No logs available');
