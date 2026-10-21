@@ -151,6 +151,10 @@ docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+> Admins can also update/rollback from **Settings → System** in the dashboard.
+> Deployments created before this feature need a one-time migration first — see
+> [Upgrade Guide → Enabling updates on an existing deployment](./docker-deployment.md#enabling-updates-on-an-existing-deployment-one-time).
+
 Or use npm scripts (if you cloned the repo):
 ```bash
 npm run docker:logs

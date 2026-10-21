@@ -445,6 +445,40 @@ Requirements (set automatically by a current `install.sh`):
 A failed image pull never changes the running version. If an update fails, the
 dashboard shows the error and the current version keeps running.
 
+### Enabling updates on an existing deployment (one-time)
+
+Deployments created before this feature run a `docker-compose.prod.yml` with a
+hardcoded `:latest` tag and an `.env` without `APP_VERSION` / `PROJECT_DIR`, so
+the dashboard button can't work yet. The dashboard can't perform this first
+migration itself — do it once over SSH, then future updates are one click.
+
+In the deployment directory (where `docker-compose.prod.yml` + `.env` live):
+
+```bash
+# 1. Pull the versioned compose file (image tags become ${APP_VERSION})
+curl -fsSL https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/docker-compose.prod.yml -o docker-compose.prod.yml
+
+# 2. Add the new vars to .env (pin a concrete version so the UI shows it clearly)
+grep -q '^PROJECT_DIR=' .env || echo "PROJECT_DIR=$(pwd)" >> .env
+grep -q '^APP_VERSION_PREVIOUS=' .env || echo "APP_VERSION_PREVIOUS=" >> .env
+if grep -q '^APP_VERSION=' .env; then
+  sed -i 's|^APP_VERSION=.*|APP_VERSION=1.2.0|' .env
+else
+  echo "APP_VERSION=1.2.0" >> .env
+fi
+
+# 3. Pull the new images and recreate
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Re-running `install.sh` also writes `PROJECT_DIR`, but it will **not** overwrite
+an existing `docker-compose.prod.yml` — step 1 above is still needed.
+
+The updater needs the `docker:cli` image, pulled from Docker Hub on first use.
+Confirm the host can reach it: `docker pull docker:cli`. (Note: the app images
+come from GHCR, so GHCR working does not guarantee Docker Hub is reachable.)
+
 ### Manually
 
 ```bash
