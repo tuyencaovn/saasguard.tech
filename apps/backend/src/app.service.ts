@@ -35,7 +35,7 @@ export class AppService {
     const telegramConfigured = !!telegramSettings?.telegramBotToken;
 
     return {
-      version: '2.0.0',
+      version: process.env.APP_VERSION || '2.0.0',
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
       database: {
         connected: this.dataSource.isInitialized,

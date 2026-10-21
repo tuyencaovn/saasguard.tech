@@ -25,6 +25,8 @@ import {
   Fingerprint,
   Trash2,
   Plus,
+  Download,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -45,6 +47,23 @@ interface SystemStatus {
   telegram: { configured: boolean };
   metrics: { refreshInterval: number; retentionDays: number };
   alerts: { logRetentionDays: number };
+}
+
+interface UpdateStatus {
+  state: 'in_progress' | 'success' | 'failed';
+  target: string;
+  previous: string;
+  error?: string;
+}
+
+interface VersionInfo {
+  current: string;
+  previous: string | null;
+  latest: string | null;
+  available: string[];
+  updateAvailable: boolean;
+  canRollback: boolean;
+  status: UpdateStatus | null;
 }
 
 export default function SettingsPage() {
@@ -71,10 +90,25 @@ export default function SettingsPage() {
   const [passkeyError, setPasskeyError] = useState('');
   const webAuthnSupported = typeof window !== 'undefined' && browserSupportsWebAuthn();
 
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+
   useEffect(() => {
     fetchStatus();
     fetchPasskeys();
-  }, []);
+    if (isAdmin) fetchVersionInfo();
+  }, [isAdmin]);
+
+  // While an update runs the backend recreates itself, so polling will fail for
+  // a bit — keep polling and recover once it's back with the new version.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const inProgress = updating || versionInfo?.status?.state === 'in_progress';
+    if (!inProgress) return;
+    const id = setInterval(fetchVersionInfo, 5000);
+    return () => clearInterval(id);
+  }, [isAdmin, updating, versionInfo?.status?.state]);
 
   const fetchPasskeys = async () => {
     setPasskeysLoading(true);
@@ -133,6 +167,45 @@ export default function SettingsPage() {
       setStatus(getDefaultStatus(false));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVersionInfo = async () => {
+    try {
+      const res = await fetch(`${API_URL}/updates/version`, { credentials: 'include' });
+      if (res.ok) {
+        const info: VersionInfo = await res.json();
+        setVersionInfo(info);
+        if (info.status?.state !== 'in_progress') setUpdating(false);
+      }
+    } catch {
+      // Backend is likely mid-restart during its own update — ignore and keep polling.
+    }
+  };
+
+  const handleUpdate = async (target: string) => {
+    const label = target === 'latest' ? 'the latest version' : `version ${target}`;
+    if (!window.confirm(`Update to ${label}? The app restarts and may be briefly unavailable.`)) {
+      return;
+    }
+    setUpdateError('');
+    setUpdating(true);
+    try {
+      const res = await fetch(`${API_URL}/updates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ target }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = Array.isArray(body.message) ? body.message.join(', ') : body.message;
+        throw new Error(msg || 'Update failed to start');
+      }
+      await fetchVersionInfo();
+    } catch (e) {
+      setUpdating(false);
+      setUpdateError(e instanceof Error ? e.message : 'Update failed to start');
     }
   };
 
@@ -358,6 +431,57 @@ export default function SettingsPage() {
                 </span>
               </div>
             </div>
+
+            {versionInfo && (
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                {updating || versionInfo.status?.state === 'in_progress' ? (
+                  <div className="flex items-center gap-2 text-sm text-amber-400">
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Updating to {versionInfo.status?.target || '…'} — the app will restart</span>
+                  </div>
+                ) : versionInfo.updateAvailable ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 text-sm text-amber-400">
+                      <AlertTriangle className="w-4 h-4" />
+                      New version {versionInfo.latest} available
+                    </span>
+                    <button
+                      onClick={() => handleUpdate('latest')}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 transition-all text-sm font-medium"
+                    >
+                      <Download className="w-4 h-4" />
+                      Update to {versionInfo.latest}
+                    </button>
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-sm text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Up to date
+                  </span>
+                )}
+
+                {versionInfo.status?.state === 'success' && !updating && (
+                  <p className="text-xs text-emerald-400/80">Now running {versionInfo.status.target}.</p>
+                )}
+                {(updateError || (versionInfo.status?.state === 'failed' && !updating)) && (
+                  <p className="text-xs text-red-400">
+                    {updateError || `Update failed: ${versionInfo.status?.error || 'unknown error'}`}
+                  </p>
+                )}
+
+                {versionInfo.canRollback &&
+                  !updating &&
+                  versionInfo.status?.state !== 'in_progress' && (
+                    <button
+                      onClick={() => handleUpdate(versionInfo.previous as string)}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-all text-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Rollback to {versionInfo.previous}
+                    </button>
+                  )}
+              </div>
+            )}
           </div>
 
           {/* Database Card */}

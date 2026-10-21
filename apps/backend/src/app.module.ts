@@ -19,6 +19,7 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
 import { EmailModule } from './modules/email/email.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { NotificationSettingsModule } from './modules/notification-settings/notification-settings.module';
+import { UpdatesModule } from './modules/updates/updates.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 
@@ -66,6 +67,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     DockerModule,
     PM2Module,
     SslModule,
+    UpdatesModule,
     GatewaysModule,
   ],
   controllers: [AppController],

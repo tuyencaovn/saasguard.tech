@@ -24,8 +24,19 @@ To wipe an existing deployment (containers, database volume, and `.env`) and
 install fresh from scratch:
 
 ```bash
-bash install.sh --force      # or: --reset
+bash install.sh --force      # local file; or: --reset
 ```
+
+Over the one-liner pipe, the flag must go **after `-s --`** so it reaches the
+script instead of `bash`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/install.sh | bash -s -- --force
+```
+
+`-s` tells `bash` to read the script from stdin (the pipe); `--` ends `bash`'s
+own options so everything after it is passed to the script. `| bash --force`
+(without `-s --`) fails — `bash` reads `--force` as its own invalid option.
 
 ⚠️ This deletes all data (database + `.env`). On `--force` the installer also
 removes its own Nginx config so it's regenerated clean (the SSL certificate is
@@ -330,6 +341,31 @@ services:
 
 ## Troubleshooting
 
+### "Docker Compose v2 not found"
+
+The installer requires Compose **v2** (the `docker compose` subcommand, no
+hyphen). Older hosts often have only Docker Engine or the legacy `docker-compose`
+v1 binary. Check:
+
+```bash
+docker compose version      # v2 — required (errors if the plugin is missing)
+docker-compose --version    # legacy v1, if present — not used by the installer
+```
+
+If v2 is missing, install the plugin (works with any Docker engine, including
+v20.10). Run the download command **on a single line** so the `-o` path isn't
+split:
+
+```bash
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SLo /usr/local/lib/docker/cli-plugins/docker-compose "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)"
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version      # should now print v2.x.x
+```
+
+On Debian/Ubuntu with Docker's apt repo, `sudo apt-get install docker-compose-plugin`
+works too.
+
 ### Images won't pull
 ```bash
 # Check GitHub Container Registry login
@@ -386,7 +422,30 @@ docker compose -f docker-compose.prod.yml down -v  # Warning: deletes data!
 
 ## Upgrade Guide
 
-When a new version is released:
+### From the dashboard (admin)
+
+**Settings → System** shows the running version. When a newer published version
+exists, an **Update** button appears; a **Rollback** button returns to the
+previous version. Both are admin-only.
+
+How it works: the version each service runs is pinned by `APP_VERSION` in `.env`
+(`docker-compose.prod.yml` reads `backend:${APP_VERSION}` / `frontend:${APP_VERSION}`).
+Because the backend can't recreate its own container, the update runs in a
+short-lived `docker:cli` helper container that pulls the target images, rewrites
+`APP_VERSION` (saving the old value to `APP_VERSION_PREVIOUS`), and runs
+`docker compose up -d`. The dashboard briefly loses connection while services
+restart, then reconnects showing the new version.
+
+Requirements (set automatically by a current `install.sh`):
+- `PROJECT_DIR` in `.env` — absolute path of this deployment dir, mounted into
+  the helper so it can apply the change.
+- `APP_VERSION` in `.env` — defaults to `latest`; the first update pins a
+  concrete version.
+
+A failed image pull never changes the running version. If an update fails, the
+dashboard shows the error and the current version keeps running.
+
+### Manually
 
 ```bash
 # Pull latest images
@@ -399,6 +458,9 @@ docker compose -f docker-compose.prod.yml up -d
 # Check health
 docker compose -f docker-compose.prod.yml logs frontend
 ```
+
+To pin/change the version manually, set `APP_VERSION` in `.env` (e.g.
+`APP_VERSION=1.2.0`) before `up -d`.
 
 Database schema migrations run automatically on startup.
 

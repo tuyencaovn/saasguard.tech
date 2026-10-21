@@ -23,6 +23,12 @@ wget https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/install.
 # If used one-liner, just wait for script to complete
 ```
 
+> **Clean reinstall (wipe DB + `.env`, keep SSL cert):** add `--force`. Over the
+> pipe it must come after `-s --`:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/tuyencaovn/saasguard.tech/master/install.sh | bash -s -- --force
+> ```
+
 **That's it!** The installer will:
 - ✅ Check Docker & Docker Compose
 - ✅ Validate your .env configuration
@@ -211,6 +217,17 @@ See `docs/docker-deployment.md` for:
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
+```
+
+### "Docker Compose v2 not found"
+The installer needs the `docker compose` v2 plugin (no hyphen). Older servers
+may lack it. Install the plugin (works even on Docker 20.10) — keep the `curl`
+on one line:
+```bash
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SLo /usr/local/lib/docker/cli-plugins/docker-compose "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)"
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
 ```
 
 ### "Nginx 502 Bad Gateway"

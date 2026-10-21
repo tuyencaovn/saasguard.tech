@@ -243,6 +243,9 @@ setup_env() {
   # values that cannot be guessed (admin email + domain/IP).
   generate_secrets
 
+  # Record where this deployment lives so the in-dashboard updater can mount it.
+  set_env_var PROJECT_DIR "$(pwd)"
+
   if [ "$NEW_ENV" = true ]; then
     prompt_config
   fi

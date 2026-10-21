@@ -53,6 +53,14 @@ export class DockerService implements OnModuleInit {
   }
 
   /**
+   * Raw dockerode handle for operations beyond monitoring (e.g. the updater
+   * spawns a one-shot container through this). Null until connected.
+   */
+  getConnection(): Docker | null {
+    return this.docker;
+  }
+
+  /**
    * List all containers
    */
   async listContainers(all = true): Promise<ContainerInfo[]> {
