@@ -315,6 +315,20 @@ docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+### Update to a Specific Version
+
+Pin `APP_VERSION` in `.env` to a published image tag (e.g. `1.4.0`), then pull and
+recreate. Run from the directory that holds `docker-compose.prod.yml` and `.env`:
+
+```bash
+sed -i 's/^APP_VERSION=.*/APP_VERSION=1.4.0/' .env || echo "APP_VERSION=1.4.0" >> .env
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Admins can also do this one-click from **Settings → version update** in the dashboard,
+which updates `APP_VERSION` and recreates the containers with one-step rollback.
+
 ### Database Backup
 
 **Full database** (everything, including metrics history) via `pg_dump`:
