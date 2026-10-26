@@ -9,6 +9,7 @@ import {
 export enum NotificationType {
   EMAIL = 'email',
   TELEGRAM = 'telegram',
+  SLACK = 'slack',
 }
 
 /**
@@ -51,6 +52,10 @@ export class NotificationSettings {
 
   @Column({ nullable: true })
   telegramChatId: string;
+
+  // Slack settings (for slack type)
+  @Column({ nullable: true })
+  slackWebhookUrl: string;
 
   @CreateDateColumn()
   createdAt: Date;

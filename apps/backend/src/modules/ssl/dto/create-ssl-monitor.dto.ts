@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsBoolean, IsEmail, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateSslMonitorDto {
@@ -14,4 +14,20 @@ export class CreateSslMonitorDto {
   @Min(1)
   @Max(65535)
   port?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyTelegram?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifySlack?: boolean;
+
+  @IsOptional()
+  @IsEmail()
+  notifyEmailTo?: string;
 }

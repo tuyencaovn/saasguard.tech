@@ -1,11 +1,13 @@
-import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsBoolean, IsEmail, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UpdateSslMonitorDto {
   @IsOptional()
   @IsString()
-  @Transform(({ value }: { value: string }) => {
-    return value.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+  @Transform(({ value }: { value: unknown }) => {
+    return typeof value === 'string'
+      ? value.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim()
+      : value;
   })
   domain?: string;
 
@@ -14,4 +16,20 @@ export class UpdateSslMonitorDto {
   @Min(1)
   @Max(65535)
   port?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyTelegram?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifySlack?: boolean;
+
+  @IsOptional()
+  @IsEmail()
+  notifyEmailTo?: string;
 }

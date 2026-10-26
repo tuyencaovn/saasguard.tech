@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Plus, Trash2, RefreshCw, X, Loader2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, RefreshCw, X, Loader2, AlertTriangle, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SslStatusBadge } from '@/components/ssl-status-badge';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -22,6 +22,10 @@ interface SslMonitor {
   lastChecked: string | null;
   issuer: string | null;
   errorMessage: string | null;
+  notifyEmail: boolean;
+  notifyTelegram: boolean;
+  notifySlack: boolean;
+  notifyEmailTo: string | null;
   createdAt: string;
 }
 
@@ -31,7 +35,12 @@ export default function SslPage() {
   const [monitors, setMonitors] = useState<SslMonitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [domainInput, setDomainInput] = useState('');
+  const [notifyEmail, setNotifyEmail] = useState(true);
+  const [notifyTelegram, setNotifyTelegram] = useState(true);
+  const [notifySlack, setNotifySlack] = useState(true);
+  const [notifyEmailTo, setNotifyEmailTo] = useState('');
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
@@ -56,7 +65,33 @@ export default function SslPage() {
     fetchMonitors();
   }, [fetchMonitors]);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setDomainInput('');
+    setNotifyEmail(true);
+    setNotifyTelegram(true);
+    setNotifySlack(true);
+    setNotifyEmailTo('');
+  };
+
+  const openAddModal = () => {
+    setEditId(null);
+    resetForm();
+    setAddError('');
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (m: SslMonitor) => {
+    setEditId(m.id);
+    setDomainInput(m.domain);
+    setNotifyEmail(m.notifyEmail);
+    setNotifyTelegram(m.notifyTelegram);
+    setNotifySlack(m.notifySlack);
+    setNotifyEmailTo(m.notifyEmailTo ?? '');
+    setAddError('');
+    setShowAddModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
     const domain = domainInput.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
@@ -66,21 +101,23 @@ export default function SslPage() {
     }
     setAdding(true);
     try {
-      const res = await fetch(`${API_URL}/ssl`, {
-        method: 'POST',
+      const body = { domain, notifyEmail, notifyTelegram, notifySlack, notifyEmailTo: notifyEmailTo.trim() || undefined };
+      const res = await fetch(editId ? `${API_URL}/ssl/${editId}` : `${API_URL}/ssl`, {
+        method: editId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ domain }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Failed to add domain');
+        throw new Error(Array.isArray(err.message) ? err.message[0] : err.message || 'Failed to save domain');
       }
       setShowAddModal(false);
-      setDomainInput('');
+      setEditId(null);
+      resetForm();
       await fetchMonitors();
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : 'Failed to add domain');
+      setAddError(err instanceof Error ? err.message : 'Failed to save domain');
     } finally {
       setAdding(false);
     }
@@ -133,7 +170,7 @@ export default function SslPage() {
           <div className="flex items-center gap-4">
             <ConnectionStatus />
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={openAddModal}
               className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
@@ -165,7 +202,7 @@ export default function SslPage() {
             <p className="text-white/50 mb-2 font-medium">No domains monitored</p>
             <p className="text-white/30 text-sm mb-6">Add your first domain to track SSL expiry.</p>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={openAddModal}
               className="btn-gradient px-5 py-2.5 text-white font-medium rounded-xl flex items-center gap-2 mx-auto"
             >
               <Plus className="w-5 h-5" />
@@ -256,6 +293,13 @@ export default function SslPage() {
                     <RefreshCw className={cn('w-4 h-4', checkingId === monitor.id && 'animate-spin')} />
                   </button>
                   <button
+                    onClick={() => openEditModal(monitor)}
+                    className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                    title="Edit notifications"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => setDeleteTarget(monitor)}
                     className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
                     title="Delete"
@@ -282,7 +326,7 @@ export default function SslPage() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-600/10 border border-violet-500/20 flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5 text-violet-400" />
                 </div>
-                <h2 className="text-lg font-semibold">Add SSL Monitor</h2>
+                <h2 className="text-lg font-semibold">{editId ? 'Edit SSL Monitor' : 'Add SSL Monitor'}</h2>
               </div>
               <button
                 onClick={() => !adding && setShowAddModal(false)}
@@ -292,7 +336,7 @@ export default function SslPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAdd} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {addError && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-sm">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -307,10 +351,59 @@ export default function SslPage() {
                   onChange={(e) => setDomainInput(e.target.value)}
                   placeholder="example.com"
                   required
-                  autoFocus
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                  autoFocus={!editId}
+                  disabled={!!editId}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-xs text-white/30 mt-1.5">Protocol (https://) will be stripped automatically</p>
+                <p className="text-xs text-white/30 mt-1.5">
+                  {editId ? 'Domain cannot be changed — delete and re-add to monitor a different domain.' : 'Protocol (https://) will be stripped automatically'}
+                </p>
+              </div>
+
+              {/* Notification config */}
+              <div className="pt-2 border-t border-white/5">
+                <p className="text-sm text-white/50 mb-3">Expiry notifications</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyEmail}
+                      onChange={(e) => setNotifyEmail(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/20 bg-white/5 accent-violet-500"
+                    />
+                    <span className="text-sm text-white/70">Email</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifyTelegram}
+                      onChange={(e) => setNotifyTelegram(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/20 bg-white/5 accent-violet-500"
+                    />
+                    <span className="text-sm text-white/70">Telegram</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifySlack}
+                      onChange={(e) => setNotifySlack(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/20 bg-white/5 accent-violet-500"
+                    />
+                    <span className="text-sm text-white/70">Slack</span>
+                  </label>
+                </div>
+                {notifyEmail && (
+                  <div className="mt-3">
+                    <label className="block text-sm text-white/50 mb-2">Send email to <span className="text-white/25">(optional)</span></label>
+                    <input
+                      type="email"
+                      value={notifyEmailTo}
+                      onChange={(e) => setNotifyEmailTo(e.target.value)}
+                      placeholder="Defaults to the admin email"
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
@@ -327,8 +420,8 @@ export default function SslPage() {
                   disabled={adding}
                   className="btn-gradient px-4 py-2.5 text-white font-medium rounded-xl flex items-center gap-2"
                 >
-                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Add Domain
+                  {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : editId ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editId ? 'Save Changes' : 'Add Domain'}
                 </button>
               </div>
             </form>

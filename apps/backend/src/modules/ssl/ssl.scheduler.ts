@@ -5,6 +5,7 @@ import { SslService } from './ssl.service';
 import { SslMonitor, SslStatus } from './entities/ssl-monitor.entity';
 import { EmailService } from '../email/email.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { SlackService } from '../slack/slack.service';
 import { getBrandConfig } from '../../config/brand.config';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class SslScheduler {
     private readonly sslService: SslService,
     private readonly emailService: EmailService,
     private readonly telegramService: TelegramService,
+    private readonly slackService: SlackService,
     private readonly configService: ConfigService,
   ) {
     const brand = getBrandConfig(this.configService);
@@ -45,20 +47,31 @@ export class SslScheduler {
     if (!shouldNotify) return;
 
     const message = this.buildNotificationMessage(monitor);
-    const subject = this.buildEmailSubject(monitor);
-    const html = this.buildEmailHtml(monitor, message);
 
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
-    if (adminEmail) {
-      await this.emailService.sendAlertEmail(adminEmail, subject, html).catch((err) =>
-        this.logger.error(`SSL email notification failed for ${monitor.domain}`, err),
+    if (monitor.notifyEmail) {
+      const recipient = monitor.notifyEmailTo || this.configService.get<string>('ADMIN_EMAIL');
+      if (recipient) {
+        const subject = this.buildEmailSubject(monitor);
+        const html = this.buildEmailHtml(monitor, message);
+        await this.emailService.sendAlertEmail(recipient, subject, html).catch((err) =>
+          this.logger.error(`SSL email notification failed for ${monitor.domain}`, err),
+        );
+      }
+    }
+
+    if (monitor.notifyTelegram) {
+      const telegramMsg = this.buildTelegramMessage(monitor, message);
+      await this.telegramService.sendAlertMessage(telegramMsg).catch((err) =>
+        this.logger.error(`SSL telegram notification failed for ${monitor.domain}`, err),
       );
     }
 
-    const telegramMsg = this.buildTelegramMessage(monitor, message);
-    await this.telegramService.sendAlertMessage(telegramMsg).catch((err) =>
-      this.logger.error(`SSL telegram notification failed for ${monitor.domain}`, err),
-    );
+    if (monitor.notifySlack) {
+      const slackMsg = `:lock: *SSL Certificate Alert*\n\n${message}\n\n— ${this.appName}`;
+      await this.slackService.sendAlertMessage(slackMsg).catch((err) =>
+        this.logger.error(`SSL slack notification failed for ${monitor.domain}`, err),
+      );
+    }
   }
 
   private buildNotificationMessage(monitor: SslMonitor): string {

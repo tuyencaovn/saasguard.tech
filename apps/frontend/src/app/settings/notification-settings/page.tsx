@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Webhook,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/config/brand';
@@ -41,7 +42,13 @@ interface TelegramSettings {
   telegramChatId: string;
 }
 
-type TabType = 'email' | 'telegram';
+interface SlackSettings {
+  id?: string;
+  enabled: boolean;
+  slackWebhookUrl: string;
+}
+
+type TabType = 'email' | 'telegram' | 'slack';
 
 export default function NotificationSettingsPage() {
   const { user } = useAuth();
@@ -75,6 +82,12 @@ export default function NotificationSettingsPage() {
     telegramBotToken: '',
     telegramChatId: '',
   });
+
+  const [slackSettings, setSlackSettings] = useState<SlackSettings>({
+    enabled: false,
+    slackWebhookUrl: '',
+  });
+  const [showWebhook, setShowWebhook] = useState(false);
 
   const [testEmail, setTestEmail] = useState('');
 
@@ -115,6 +128,13 @@ export default function NotificationSettingsPage() {
             enabled: data.telegram.enabled,
             telegramBotToken: '', // Don't show masked token
             telegramChatId: data.telegram.telegramChatId || '',
+          });
+        }
+        if (data.slack) {
+          setSlackSettings({
+            id: data.slack.id,
+            enabled: data.slack.enabled,
+            slackWebhookUrl: '', // Don't show masked webhook
           });
         }
       }
@@ -236,6 +256,53 @@ export default function NotificationSettingsPage() {
     }
   };
 
+  const saveSlackSettings = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const payload: Partial<SlackSettings> = { enabled: slackSettings.enabled };
+      if (slackSettings.slackWebhookUrl) {
+        payload.slackWebhookUrl = slackSettings.slackWebhookUrl;
+      }
+
+      const res = await fetch(`${API_URL}/notification-settings/slack`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Slack settings saved!' });
+        setSlackSettings(prev => ({ ...prev, slackWebhookUrl: '' }));
+      } else {
+        const error = await res.json();
+        setMessage({ type: 'error', text: Array.isArray(error.message) ? error.message[0] : error.message || 'Failed to save' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to save settings' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testSlackConfig = async () => {
+    setTesting(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`${API_URL}/notification-settings/slack/test`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      setMessage({ type: data.success ? 'success' : 'error', text: data.message });
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to send test message' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -254,7 +321,7 @@ export default function NotificationSettingsPage() {
             </button>
             <div>
               <h1 className="text-2xl font-bold">Notification Settings</h1>
-              <p className="text-sm text-white/40">Configure email and Telegram notifications</p>
+              <p className="text-sm text-white/40">Configure email, Telegram and Slack notifications</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -309,6 +376,18 @@ export default function NotificationSettingsPage() {
           >
             <MessageSquare className="w-4 h-4" />
             Telegram
+          </button>
+          <button
+            onClick={() => setActiveTab('slack')}
+            className={cn(
+              'px-5 py-2.5 rounded-xl font-medium border border-transparent transition-all flex items-center gap-2',
+              activeTab === 'slack'
+                ? 'tab-active'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            )}
+          >
+            <Webhook className="w-4 h-4" />
+            Slack
           </button>
         </div>
 
@@ -543,6 +622,91 @@ export default function NotificationSettingsPage() {
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Save Telegram Settings
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Slack Settings */}
+            {activeTab === 'slack' && (
+              <div className="glass-card rounded-2xl p-6 space-y-6">
+                {/* Pro upgrade prompt for free users */}
+                {isFree && (
+                  <UpgradePrompt
+                    feature="Slack Notifications"
+                    description="Slack alerts are a Pro feature. Upgrade to get instant crash notifications in your workspace."
+                    variant="inline"
+                  />
+                )}
+
+                {/* Enable Toggle */}
+                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div>
+                    <h3 className="font-semibold">Enable Slack Notifications</h3>
+                    <p className="text-sm text-white/40">Send alerts to a Slack incoming webhook</p>
+                  </div>
+                  <button
+                    onClick={() => setSlackSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                    className={cn(
+                      'relative w-12 h-7 rounded-full p-1 transition-all',
+                      slackSettings.enabled && 'toggle-active'
+                    )}
+                  >
+                    <span className="toggle-track absolute inset-0 rounded-full bg-white/10" />
+                    <span
+                      className={cn(
+                        'toggle-thumb relative block w-5 h-5 rounded-full shadow-lg transition-transform',
+                        slackSettings.enabled ? 'bg-white' : 'bg-white/50'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Webhook URL */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-white/50 mb-2">Incoming Webhook URL</label>
+                    <div className="relative">
+                      <input
+                        type={showWebhook ? 'text' : 'password'}
+                        value={slackSettings.slackWebhookUrl}
+                        onChange={(e) => setSlackSettings(prev => ({ ...prev, slackWebhookUrl: e.target.value }))}
+                        placeholder="https://hooks.slack.com/services/T000/B000/XXXX"
+                        className="w-full px-4 py-3 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowWebhook(!showWebhook)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      >
+                        {showWebhook ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-white/30 mt-1">Create one at api.slack.com → Incoming Webhooks. Leave blank to keep the saved URL.</p>
+                  </div>
+                </div>
+
+                {/* Test Button */}
+                <div className="pt-4 border-t border-white/10">
+                  <button
+                    onClick={testSlackConfig}
+                    disabled={testing}
+                    className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-medium transition-all flex items-center gap-2"
+                  >
+                    {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send Test Message
+                  </button>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={saveSlackSettings}
+                    disabled={saving}
+                    className="btn-gradient px-6 py-3 text-white font-medium rounded-xl flex items-center gap-2"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Slack Settings
                   </button>
                 </div>
               </div>

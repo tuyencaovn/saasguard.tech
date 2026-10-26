@@ -5,12 +5,14 @@ import { NotificationSettingsService } from './notification-settings.service';
 import { NotificationSettingsController } from './notification-settings.controller';
 import { EmailModule } from '../email/email.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { SlackModule } from '../slack/slack.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([NotificationSettings]),
     forwardRef(() => EmailModule),
     forwardRef(() => TelegramModule),
+    forwardRef(() => SlackModule),
   ],
   controllers: [NotificationSettingsController],
   providers: [NotificationSettingsService],

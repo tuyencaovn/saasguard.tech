@@ -54,6 +54,19 @@ export class SslMonitor {
   @Column({ nullable: true, type: 'varchar' })
   errorMessage: string | null;
 
+  @Column({ default: true })
+  notifyEmail: boolean;
+
+  @Column({ default: true })
+  notifyTelegram: boolean;
+
+  @Column({ default: true })
+  notifySlack: boolean;
+
+  // Optional override recipient; falls back to ADMIN_EMAIL when null.
+  @Column({ nullable: true, type: 'varchar' })
+  notifyEmailTo: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

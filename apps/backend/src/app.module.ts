@@ -13,11 +13,13 @@ import { MetricsModule } from './modules/metrics/metrics.module';
 import { DockerModule } from './modules/docker/docker.module';
 import { PM2Module } from './modules/pm2/pm2.module';
 import { SslModule } from './modules/ssl/ssl.module';
+import { UptimeModule } from './modules/uptime/uptime.module';
 import { GatewaysModule } from './gateways/gateways.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { EmailModule } from './modules/email/email.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
+import { SlackModule } from './modules/slack/slack.module';
 import { NotificationSettingsModule } from './modules/notification-settings/notification-settings.module';
 import { UpdatesModule } from './modules/updates/updates.module';
 import { BackupModule } from './modules/backup/backup.module';
@@ -60,6 +62,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     NotificationSettingsModule,
     EmailModule,
     TelegramModule,
+    SlackModule,
     AuthModule,
     InvitationsModule,
     UsersModule,
@@ -68,6 +71,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     DockerModule,
     PM2Module,
     SslModule,
+    UptimeModule,
     UpdatesModule,
     BackupModule,
     GatewaysModule,

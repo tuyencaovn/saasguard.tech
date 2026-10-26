@@ -2,10 +2,12 @@ import { Controller, Get, Patch, Body, Post, HttpCode, HttpStatus } from '@nestj
 import { NotificationSettingsService } from './notification-settings.service';
 import { UpdateEmailSettingsDto } from './dto/update-email-settings.dto';
 import { UpdateTelegramSettingsDto } from './dto/update-telegram-settings.dto';
+import { UpdateSlackSettingsDto } from './dto/update-slack-settings.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { EmailService } from '../email/email.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { SlackService } from '../slack/slack.service';
 
 @Controller('notification-settings')
 export class NotificationSettingsController {
@@ -13,6 +15,7 @@ export class NotificationSettingsController {
     private readonly settingsService: NotificationSettingsService,
     private readonly emailService: EmailService,
     private readonly telegramService: TelegramService,
+    private readonly slackService: SlackService,
   ) {}
 
   /**
@@ -21,10 +24,11 @@ export class NotificationSettingsController {
   @Get()
   @Roles(UserRole.ADMIN)
   async getAll() {
-    const { email, telegram } = await this.settingsService.getAllSettings();
+    const { email, telegram, slack } = await this.settingsService.getAllSettings();
     return {
       email: email ? this.sanitizeEmailSettings(email) : null,
       telegram: telegram ? this.sanitizeTelegramSettings(telegram) : null,
+      slack: slack ? this.sanitizeSlackSettings(slack) : null,
     };
   }
 
@@ -73,6 +77,38 @@ export class NotificationSettingsController {
   }
 
   /**
+   * Get slack settings (Admin only)
+   */
+  @Get('slack')
+  @Roles(UserRole.ADMIN)
+  async getSlackSettings() {
+    const settings = await this.settingsService.getSlackSettings();
+    return settings ? this.sanitizeSlackSettings(settings) : null;
+  }
+
+  /**
+   * Update slack settings (Admin only)
+   */
+  @Patch('slack')
+  @Roles(UserRole.ADMIN)
+  async updateSlackSettings(@Body() dto: UpdateSlackSettingsDto) {
+    const updated = await this.settingsService.updateSlackSettings(dto);
+    await this.slackService.reinitialize();
+    return this.sanitizeSlackSettings(updated);
+  }
+
+  /**
+   * Test slack configuration by sending a test message
+   */
+  @Post('slack/test')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async testSlack() {
+    const sent = await this.slackService.sendTestMessage();
+    return { success: sent, message: sent ? 'Test message sent' : 'Failed to send test message' };
+  }
+
+  /**
    * Test email configuration by sending a test email
    */
   @Post('email/test')
@@ -117,6 +153,16 @@ export class NotificationSettingsController {
       enabled: settings.enabled,
       telegramBotToken: settings.telegramBotToken ? '••••••••' : null, // Mask token
       telegramChatId: settings.telegramChatId,
+      updatedAt: settings.updatedAt,
+    };
+  }
+
+  private sanitizeSlackSettings(settings: any) {
+    return {
+      id: settings.id,
+      type: settings.type,
+      enabled: settings.enabled,
+      slackWebhookUrl: settings.slackWebhookUrl ? '••••••••' : null, // Mask webhook URL
       updatedAt: settings.updatedAt,
     };
   }

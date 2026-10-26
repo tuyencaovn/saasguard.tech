@@ -7,11 +7,12 @@ Monitor your VPS for crash loops, disk filling, and SSL expiry. Get alerted befo
 - **Crash-Loop Detection**: Detects when your app restarts repeatedly and alerts you immediately
 - **Disk Risk Monitoring**: Predicts disk full events before they happen (warns at 80%, alerts at 90%)
 - **SSL Expiry Monitor**: Tracks all SSL certificates and warns 30, 14, and 7 days before expiry
+- **Uptime Monitor**: Checks apps on any domain at a configurable interval (1 min–1 hr), tracks response time and 24h/7d/30d uptime from an hourly-rollup history, alerts on down & recovery with per-monitor channel settings
 - **Health Score**: A single 0–100 score combining CPU, RAM, disk, and service health
 - **Real-time Metrics**: CPU, RAM, Disk, Network usage via WebSocket
 - **Docker Monitoring**: Container status, events, Start/Stop/Restart, logs
 - **PM2 Monitoring**: Process management, CPU/Memory stats, Start/Stop/Restart, logs
-- **Alert System**: Email (SendGrid) & Telegram notifications
+- **Alert System**: Email (SMTP), Telegram, and Slack (incoming webhook) notifications
 - **User Authentication**: JWT-based auth with role management (Admin/Viewer), plus passkey (WebAuthn) login
 
 ## Tech Stack

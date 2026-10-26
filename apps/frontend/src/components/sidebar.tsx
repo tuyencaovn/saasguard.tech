@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   XCircle,
   ShieldCheck,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -43,6 +44,7 @@ const navigation: NavItem[] = [
   { name: 'Background Services', href: '/pm2', icon: Terminal },
   { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'SSL Certificates', href: '/ssl', icon: ShieldCheck },
+  { name: 'Uptime', href: '/uptime', icon: Activity },
   { name: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 

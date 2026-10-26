@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationSettings, NotificationType } from './entities/notification-settings.entity';
 import { UpdateEmailSettingsDto } from './dto/update-email-settings.dto';
 import { UpdateTelegramSettingsDto } from './dto/update-telegram-settings.dto';
+import { UpdateSlackSettingsDto } from './dto/update-slack-settings.dto';
 import { getBrandConfig } from '../../config/brand.config';
 
 @Injectable()
@@ -60,6 +61,19 @@ export class NotificationSettingsService implements OnModuleInit {
       await this.repo.save(telegramSettings);
       this.logger.log('Telegram settings initialized from .env');
     }
+
+    // Check if slack settings exist
+    const slackExists = await this.repo.findOne({ where: { type: NotificationType.SLACK } });
+    if (!slackExists) {
+      const webhookUrl = this.configService.get<string>('SLACK_WEBHOOK_URL');
+      const slackSettings = this.repo.create({
+        type: NotificationType.SLACK,
+        enabled: !!webhookUrl,
+        slackWebhookUrl: webhookUrl || undefined,
+      });
+      await this.repo.save(slackSettings);
+      this.logger.log('Slack settings initialized from .env');
+    }
   }
 
   async getEmailSettings(): Promise<NotificationSettings | null> {
@@ -68,6 +82,10 @@ export class NotificationSettingsService implements OnModuleInit {
 
   async getTelegramSettings(): Promise<NotificationSettings | null> {
     return this.repo.findOne({ where: { type: NotificationType.TELEGRAM } });
+  }
+
+  async getSlackSettings(): Promise<NotificationSettings | null> {
+    return this.repo.findOne({ where: { type: NotificationType.SLACK } });
   }
 
   async updateEmailSettings(dto: UpdateEmailSettingsDto): Promise<NotificationSettings> {
@@ -101,17 +119,31 @@ export class NotificationSettingsService implements OnModuleInit {
     return this.repo.save(settings);
   }
 
+  async updateSlackSettings(dto: UpdateSlackSettingsDto): Promise<NotificationSettings> {
+    let settings = await this.getSlackSettings();
+    if (!settings) {
+      settings = this.repo.create({ type: NotificationType.SLACK });
+    }
+
+    if (dto.enabled !== undefined) settings.enabled = dto.enabled;
+    if (dto.slackWebhookUrl !== undefined) settings.slackWebhookUrl = dto.slackWebhookUrl;
+
+    return this.repo.save(settings);
+  }
+
   /**
    * Get all notification settings for status display
    */
   async getAllSettings(): Promise<{
     email: NotificationSettings | null;
     telegram: NotificationSettings | null;
+    slack: NotificationSettings | null;
   }> {
-    const [email, telegram] = await Promise.all([
+    const [email, telegram, slack] = await Promise.all([
       this.getEmailSettings(),
       this.getTelegramSettings(),
+      this.getSlackSettings(),
     ]);
-    return { email, telegram };
+    return { email, telegram, slack };
   }
 }
