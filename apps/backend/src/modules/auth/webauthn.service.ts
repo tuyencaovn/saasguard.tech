@@ -88,12 +88,22 @@ export class WebAuthnService {
       );
     }
 
-    const verification = await verifyRegistrationResponse({
-      response: dto.response,
-      expectedChallenge,
-      expectedOrigin: this.frontendUrl,
-      expectedRPID: this.rpID,
-    });
+    let verification: Awaited<ReturnType<typeof verifyRegistrationResponse>>;
+    try {
+      verification = await verifyRegistrationResponse({
+        response: dto.response,
+        expectedChallenge,
+        expectedOrigin: this.frontendUrl,
+        expectedRPID: this.rpID,
+        // Match the 'preferred' userVerification in the registration options:
+        // accept authenticators that don't set the UV flag.
+        requireUserVerification: false,
+      });
+    } catch (err) {
+      throw new BadRequestException(
+        err instanceof Error ? err.message : 'Passkey registration failed',
+      );
+    }
 
     if (!verification.verified || !verification.registrationInfo) {
       throw new BadRequestException('Passkey registration failed');
@@ -160,21 +170,28 @@ export class WebAuthnService {
       throw new UnauthorizedException('Passkey authentication failed');
     }
 
-    const verification = await verifyAuthenticationResponse({
-      response: dto.response,
-      // One-time challenge: the store only holds challenges we issued, and
-      // consume() removes it, so a captured response cannot be replayed.
-      expectedChallenge: (challenge) =>
-        this.challengeStore.consume(`auth:${challenge}`) !== null,
-      expectedOrigin: this.frontendUrl,
-      expectedRPID: this.rpID,
-      credential: {
-        id: credential.credentialId,
-        publicKey: isoBase64URL.toBuffer(credential.publicKey),
-        counter: credential.counter,
-        transports: credential.transports ?? undefined,
-      },
-    });
+    let verification: Awaited<ReturnType<typeof verifyAuthenticationResponse>>;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response: dto.response,
+        // One-time challenge: the store only holds challenges we issued, and
+        // consume() removes it, so a captured response cannot be replayed.
+        expectedChallenge: (challenge) =>
+          this.challengeStore.consume(`auth:${challenge}`) !== null,
+        expectedOrigin: this.frontendUrl,
+        expectedRPID: this.rpID,
+        // Match the 'preferred' userVerification in the login options.
+        requireUserVerification: false,
+        credential: {
+          id: credential.credentialId,
+          publicKey: isoBase64URL.toBuffer(credential.publicKey),
+          counter: credential.counter,
+          transports: credential.transports ?? undefined,
+        },
+      });
+    } catch {
+      throw new UnauthorizedException('Passkey authentication failed');
+    }
 
     if (!verification.verified) {
       throw new UnauthorizedException('Passkey authentication failed');
