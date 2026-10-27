@@ -299,21 +299,30 @@ export default function UsersPage() {
           ) : users.length === 0 ? (
             <p className="text-center text-white/40 py-8">No users found</p>
           ) : (
-            <div className="space-y-3">
-              {users.map((user) => (
+            <div className="rounded-xl border border-white/5 overflow-hidden">
+              {/* Table header */}
+              <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-4 py-3 border-b border-white/5 bg-white/[0.02] text-xs text-white/40 uppercase tracking-wider">
+                <span>User</span>
+                <span>Role</span>
+                <span>Status</span>
+                <span>Joined</span>
+                <span />
+              </div>
+
+              {users.map((user, idx) => (
                 <div
                   key={user.id}
                   className={cn(
-                    'flex items-center justify-between p-4 rounded-xl border transition-all',
-                    user.isActive
-                      ? 'bg-white/5 border-white/5 hover:border-white/10'
-                      : 'bg-red-500/5 border-red-500/20'
+                    'px-4 py-3 flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 md:gap-4 md:items-center',
+                    idx < users.length - 1 && 'border-b border-white/5',
+                    !user.isActive && 'bg-red-500/5'
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  {/* User */}
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={cn(
-                        'w-10 h-10 rounded-xl flex items-center justify-center',
+                        'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
                         user.role === 'admin'
                           ? 'bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20'
                           : user.isActive
@@ -327,43 +336,60 @@ export default function UsersPage() {
                         <Eye className={cn('h-4 w-4', user.isActive ? 'text-white/60' : 'text-red-400')} />
                       )}
                     </div>
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        {user.email}
-                        {!user.isActive && (
-                          <span className="px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded">
-                            Locked
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-white/40 capitalize">
-                        {user.role} • Joined {new Date(user.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
+                    <span className="font-medium truncate">{user.email}</span>
                   </div>
-                  {user.id !== currentUser?.id && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleToggleActive(user.id)}
-                        className={cn(
-                          'p-2 rounded-lg transition-all',
-                          user.isActive
-                            ? 'text-white/40 hover:text-amber-400 hover:bg-amber-500/10'
-                            : 'text-amber-400 hover:text-emerald-400 hover:bg-emerald-500/10'
-                        )}
-                        title={user.isActive ? 'Lock user' : 'Unlock user'}
-                      >
-                        {user.isActive ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                        title="Delete user"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+
+                  {/* Role */}
+                  <div className="text-sm text-white/60 capitalize">{user.role}</div>
+
+                  {/* Status */}
+                  <div>
+                    {user.isActive ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        Locked
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Joined */}
+                  <div className="text-sm text-white/40">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 justify-end">
+                    {user.id !== currentUser?.id ? (
+                      <>
+                        <button
+                          onClick={() => handleToggleActive(user.id)}
+                          className={cn(
+                            'p-2 rounded-lg transition-all',
+                            user.isActive
+                              ? 'text-white/40 hover:text-amber-400 hover:bg-amber-500/10'
+                              : 'text-amber-400 hover:text-emerald-400 hover:bg-emerald-500/10'
+                          )}
+                          title={user.isActive ? 'Lock user' : 'Unlock user'}
+                        >
+                          {user.isActive ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-white/25">You</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -386,28 +412,54 @@ export default function UsersPage() {
           ) : pendingInvitations.length === 0 ? (
             <p className="text-center text-white/40 py-8">No pending invitations</p>
           ) : (
-            <div className="space-y-3">
-              {pendingInvitations.map((invitation) => (
+            <div className="rounded-xl border border-white/5 overflow-hidden">
+              {/* Table header */}
+              <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-3 border-b border-white/5 bg-white/[0.02] text-xs text-white/40 uppercase tracking-wider">
+                <span>Email</span>
+                <span>Status</span>
+                <span>Expires</span>
+                <span />
+              </div>
+
+              {pendingInvitations.map((invitation, idx) => (
                 <div
                   key={invitation.id}
                   className={cn(
-                    'flex items-center justify-between p-4 rounded-xl border transition-all',
-                    invitation.isExpired
-                      ? 'bg-red-500/5 border-red-500/20'
-                      : 'bg-white/5 border-white/5 hover:border-white/10'
+                    'px-4 py-3 flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_auto] gap-3 md:gap-4 md:items-center',
+                    idx < pendingInvitations.length - 1 && 'border-b border-white/5',
+                    invitation.isExpired && 'bg-red-500/5'
                   )}
                 >
-                  <div>
-                    <div className="font-medium">{invitation.email}</div>
-                    <div className="text-xs text-white/40">
-                      {invitation.isExpired ? (
-                        <span className="text-red-400">Expired</span>
-                      ) : (
-                        <>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</>
-                      )}
+                  {/* Email */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-4 w-4 text-amber-400" />
                     </div>
+                    <span className="font-medium truncate">{invitation.email}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+
+                  {/* Status */}
+                  <div>
+                    {invitation.isExpired ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        Expired
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Expires */}
+                  <div className="text-sm text-white/40">
+                    {new Date(invitation.expiresAt).toLocaleDateString()}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 justify-end">
                     {!invitation.isExpired && (
                       <button
                         onClick={() => copyInviteLink(invitation.token, invitation.id)}
