@@ -89,6 +89,14 @@ export default function NotificationSettingsPage() {
   });
   const [showWebhook, setShowWebhook] = useState(false);
 
+  // Whether a secret is already stored (derived from the masked value the API returns),
+  // so admins can tell "configured, leave blank to keep" from "not set yet".
+  const [configured, setConfigured] = useState({
+    smtpPass: false,
+    telegramToken: false,
+    slackWebhook: false,
+  });
+
   const [testEmail, setTestEmail] = useState('');
 
   // Redirect non-admin users
@@ -121,6 +129,7 @@ export default function NotificationSettingsPage() {
             smtpFromName: data.email.smtpFromName || APP_NAME,
             smtpFromEmail: data.email.smtpFromEmail || '',
           });
+          setConfigured((prev) => ({ ...prev, smtpPass: !!data.email.smtpPass }));
         }
         if (data.telegram) {
           setTelegramSettings({
@@ -129,6 +138,7 @@ export default function NotificationSettingsPage() {
             telegramBotToken: '', // Don't show masked token
             telegramChatId: data.telegram.telegramChatId || '',
           });
+          setConfigured((prev) => ({ ...prev, telegramToken: !!data.telegram.telegramBotToken }));
         }
         if (data.slack) {
           setSlackSettings({
@@ -136,6 +146,7 @@ export default function NotificationSettingsPage() {
             enabled: data.slack.enabled,
             slackWebhookUrl: '', // Don't show masked webhook
           });
+          setConfigured((prev) => ({ ...prev, slackWebhook: !!data.slack.slackWebhookUrl }));
         }
       }
     } catch (error) {
@@ -171,6 +182,7 @@ export default function NotificationSettingsPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: 'Email settings saved!' });
+        setConfigured(prev => ({ ...prev, smtpPass: prev.smtpPass || !!emailSettings.smtpPass }));
         setEmailSettings(prev => ({ ...prev, smtpPass: '' })); // Clear password field
       } else {
         const error = await res.json();
@@ -204,6 +216,7 @@ export default function NotificationSettingsPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: 'Telegram settings saved!' });
+        setConfigured(prev => ({ ...prev, telegramToken: prev.telegramToken || !!telegramSettings.telegramBotToken }));
         setTelegramSettings(prev => ({ ...prev, telegramBotToken: '' }));
       } else {
         const error = await res.json();
@@ -274,6 +287,7 @@ export default function NotificationSettingsPage() {
 
       if (res.ok) {
         setMessage({ type: 'success', text: 'Slack settings saved!' });
+        setConfigured(prev => ({ ...prev, slackWebhook: prev.slackWebhook || !!slackSettings.slackWebhookUrl }));
         setSlackSettings(prev => ({ ...prev, slackWebhookUrl: '' }));
       } else {
         const error = await res.json();
@@ -472,6 +486,9 @@ export default function NotificationSettingsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-white/30 mt-1">Leave empty to keep existing password</p>
+                    {configured.smtpPass && (
+                      <p className="text-xs text-emerald-400 mt-1">✓ A password is already saved — leave blank to keep it.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm text-white/50 mb-2">From Name</label>
@@ -587,6 +604,9 @@ export default function NotificationSettingsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-white/30 mt-1">Get token from @BotFather on Telegram</p>
+                    {configured.telegramToken && (
+                      <p className="text-xs text-emerald-400 mt-1">✓ A bot token is already saved — leave blank to keep it, or enter a new one to replace it.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm text-white/50 mb-2">Chat ID</label>
@@ -683,6 +703,9 @@ export default function NotificationSettingsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-white/30 mt-1">Create one at api.slack.com → Incoming Webhooks. Leave blank to keep the saved URL.</p>
+                    {configured.slackWebhook && (
+                      <p className="text-xs text-emerald-400 mt-1">✓ A webhook is already saved — leave blank to keep it, or enter a new one to replace it.</p>
+                    )}
                   </div>
                 </div>
 

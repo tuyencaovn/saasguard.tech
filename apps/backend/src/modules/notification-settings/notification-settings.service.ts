@@ -99,7 +99,8 @@ export class NotificationSettingsService implements OnModuleInit {
     if (dto.smtpHost !== undefined) settings.smtpHost = dto.smtpHost;
     if (dto.smtpPort !== undefined) settings.smtpPort = dto.smtpPort;
     if (dto.smtpUser !== undefined) settings.smtpUser = dto.smtpUser;
-    if (dto.smtpPass !== undefined) settings.smtpPass = dto.smtpPass;
+    // Secret: only overwrite when a non-empty value is given, so a blank save keeps it.
+    if (dto.smtpPass) settings.smtpPass = dto.smtpPass;
     if (dto.smtpFromName !== undefined) settings.smtpFromName = dto.smtpFromName;
     if (dto.smtpFromEmail !== undefined) settings.smtpFromEmail = dto.smtpFromEmail;
 
@@ -113,7 +114,8 @@ export class NotificationSettingsService implements OnModuleInit {
     }
 
     if (dto.enabled !== undefined) settings.enabled = dto.enabled;
-    if (dto.telegramBotToken !== undefined) settings.telegramBotToken = dto.telegramBotToken;
+    // Secret: only overwrite when a non-empty value is given, so a blank save keeps it.
+    if (dto.telegramBotToken) settings.telegramBotToken = dto.telegramBotToken;
     if (dto.telegramChatId !== undefined) settings.telegramChatId = dto.telegramChatId;
 
     return this.repo.save(settings);
@@ -126,7 +128,8 @@ export class NotificationSettingsService implements OnModuleInit {
     }
 
     if (dto.enabled !== undefined) settings.enabled = dto.enabled;
-    if (dto.slackWebhookUrl !== undefined) settings.slackWebhookUrl = dto.slackWebhookUrl;
+    // Secret: only overwrite when a non-empty value is given, so a blank save keeps it.
+    if (dto.slackWebhookUrl) settings.slackWebhookUrl = dto.slackWebhookUrl;
 
     return this.repo.save(settings);
   }
