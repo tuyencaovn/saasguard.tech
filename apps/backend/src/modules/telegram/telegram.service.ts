@@ -62,30 +62,40 @@ export class TelegramService {
       return false;
     }
 
-    try {
-      const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: this.chatId,
-          text: message,
-          parse_mode: 'HTML',
-        }),
-      });
+    return this.postMessage(message);
+  }
 
-      if (!response.ok) {
+  /**
+   * POST to the Telegram API with a per-attempt timeout and retries, so a flaky
+   * or throttled network (common for Telegram) doesn't drop the notification.
+   */
+  private async postMessage(text: string): Promise<boolean> {
+    const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
+    const body = JSON.stringify({ chat_id: this.chatId, text, parse_mode: 'HTML' });
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (response.ok) {
+          this.logger.log('Telegram message sent successfully');
+          return true;
+        }
         const error = await response.text();
-        this.logger.error(`Telegram API error: ${error}`);
-        return false;
+        this.logger.error(`Telegram API error (attempt ${attempt}): ${error}`);
+        // 4xx is a config problem (bad token/chat) — retrying won't help.
+        if (response.status >= 400 && response.status < 500) return false;
+      } catch (error) {
+        this.logger.warn(`Telegram send attempt ${attempt} failed: ${(error as Error).message}`);
       }
-
-      this.logger.log('Telegram message sent successfully');
-      return true;
-    } catch (error) {
-      this.logger.error('Failed to send Telegram message', error);
-      return false;
+      if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
     }
+    this.logger.error('Failed to send Telegram message after retries');
+    return false;
   }
 
   /**
@@ -104,30 +114,7 @@ export class TelegramService {
 
     const testMessage = `🧪 <b>Test Message</b>\n\nYour Telegram notification is configured correctly!\n\nSent from ${this.appName} at ${new Date().toLocaleString()}`;
 
-    try {
-      const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: this.chatId,
-          text: testMessage,
-          parse_mode: 'HTML',
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        this.logger.error(`Telegram test failed: ${error}`);
-        return false;
-      }
-
-      this.logger.log('Telegram test message sent');
-      return true;
-    } catch (error) {
-      this.logger.error('Failed to send Telegram test', error);
-      return false;
-    }
+    return this.postMessage(testMessage);
   }
 
   /**

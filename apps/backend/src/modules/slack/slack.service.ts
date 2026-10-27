@@ -69,24 +69,33 @@ export class SlackService {
     return this.post(this.webhookUrl, testMessage);
   }
 
+  // POST to the webhook with a per-attempt timeout and retries, so a transient
+  // network blip doesn't drop the notification.
   private async post(webhookUrl: string, text: string): Promise<boolean> {
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (!response.ok) {
+    const body = JSON.stringify({ text });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (response.ok) {
+          this.logger.log('Slack message sent successfully');
+          return true;
+        }
         const error = await response.text();
-        this.logger.error(`Slack webhook error: ${error}`);
-        return false;
+        this.logger.error(`Slack webhook error (attempt ${attempt}): ${error}`);
+        // 4xx means a bad/removed webhook — retrying won't help.
+        if (response.status >= 400 && response.status < 500) return false;
+      } catch (error) {
+        this.logger.warn(`Slack send attempt ${attempt} failed: ${(error as Error).message}`);
       }
-      this.logger.log('Slack message sent successfully');
-      return true;
-    } catch (error) {
-      this.logger.error('Failed to send Slack message', error);
-      return false;
+      if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
     }
+    this.logger.error('Failed to send Slack message after retries');
+    return false;
   }
 
   isConfigured(): boolean {
