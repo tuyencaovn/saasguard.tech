@@ -26,6 +26,8 @@ interface UptimeMonitor {
   uptime24h: number | null;
   uptime7d: number | null;
   uptime30d: number | null;
+  hourly: { start: string; uptime: number | null }[];
+  daily: { date: string; uptime: number | null }[];
   createdAt: string;
 }
 
@@ -72,6 +74,30 @@ function uptimeColor(value: number | null): string {
   if (value >= 99.5) return 'text-emerald-400';
   if (value >= 95) return 'text-amber-400';
   return 'text-red-400';
+}
+
+function segColor(value: number | null): string {
+  if (value === null) return 'bg-white/10';
+  if (value >= 99.5) return 'bg-emerald-500/80';
+  if (value >= 90) return 'bg-amber-500/80';
+  return 'bg-red-500/80';
+}
+
+function StatusBar({ segments }: { segments: { key: string; uptime: number | null; title: string }[] }) {
+  if (segments.length === 0) {
+    return <div className="h-2.5 rounded-sm bg-white/5" />;
+  }
+  return (
+    <div className="flex items-center gap-[2px]">
+      {segments.map((s) => (
+        <span
+          key={s.key}
+          title={s.title}
+          className={cn('h-2.5 flex-1 rounded-[2px] transition-colors', segColor(s.uptime))}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function UptimePage() {
@@ -304,13 +330,35 @@ export default function UptimePage() {
                     : <span className="text-white/30">—</span>}
                 </div>
 
-                {/* Uptime windows */}
-                <div className="flex items-center gap-3 text-sm font-medium">
-                  <span className={uptimeColor(monitor.uptime24h)} title="Last 24 hours">{formatUptime(monitor.uptime24h)}</span>
-                  <span className="text-white/20">/</span>
-                  <span className={uptimeColor(monitor.uptime7d)} title="Last 7 days">{formatUptime(monitor.uptime7d)}</span>
-                  <span className="text-white/20">/</span>
-                  <span className={uptimeColor(monitor.uptime30d)} title="Last 30 days">{formatUptime(monitor.uptime30d)}</span>
+                {/* Uptime windows + status bars */}
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 text-xs font-medium">
+                    <span className={uptimeColor(monitor.uptime24h)} title="Last 24 hours">{formatUptime(monitor.uptime24h)}</span>
+                    <span className="text-white/20">/</span>
+                    <span className={uptimeColor(monitor.uptime7d)} title="Last 7 days">{formatUptime(monitor.uptime7d)}</span>
+                    <span className="text-white/20">/</span>
+                    <span className={uptimeColor(monitor.uptime30d)} title="Last 30 days">{formatUptime(monitor.uptime30d)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-white/30 w-5 shrink-0">24h</span>
+                    <StatusBar
+                      segments={(monitor.hourly ?? []).map((h) => ({
+                        key: h.start,
+                        uptime: h.uptime,
+                        title: `${new Date(h.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })} — ${h.uptime === null ? 'no data' : `${h.uptime}% up`}`,
+                      }))}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-white/30 w-5 shrink-0">7d</span>
+                    <StatusBar
+                      segments={(monitor.daily ?? []).map((d) => ({
+                        key: d.date,
+                        uptime: d.uptime,
+                        title: `${d.date} — ${d.uptime === null ? 'no data' : `${d.uptime}% up`}`,
+                      }))}
+                    />
+                  </div>
                 </div>
 
                 {/* Last checked */}

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, MoreThanOrEqual } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { UptimeMonitor, UptimeStatus } from './entities/uptime-monitor.entity';
 import { UptimeHourlyStat } from './entities/uptime-hourly-stat.entity';
@@ -33,7 +33,18 @@ export interface UptimeStats {
   uptime30d: number | null;
 }
 
-export type MonitorWithStats = UptimeMonitor & UptimeStats;
+// Per-slot uptime % (null = no data) for the status bars: 24 hourly + 7 daily.
+export interface UptimeSeries {
+  hourly: { start: string; uptime: number | null }[];
+  daily: { date: string; uptime: number | null }[];
+}
+
+export type MonitorWithStats = UptimeMonitor & UptimeStats & UptimeSeries;
+
+const HOURLY_SLOTS = 24;
+const DAILY_SLOTS = 7;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 function toPercent(up: string | number | null, total: string | number | null): number | null {
   const t = Number(total);
@@ -45,6 +56,37 @@ function currentHourBucket(now: Date): Date {
   const bucket = new Date(now);
   bucket.setUTCMinutes(0, 0, 0);
   return bucket;
+}
+
+// Day boundaries for the 7-day bar follow the app's timezone (Vietnam), not UTC,
+// so an outage near midnight lands on the right local day.
+const APP_TIMEZONE = 'Asia/Saigon';
+
+// Offset (ms) of a timezone from UTC at a given instant: localWallClock - utc.
+function tzOffsetMs(timeZone: string, at: Date): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts: Record<string, number> = {};
+  for (const p of dtf.formatToParts(at)) {
+    if (p.type !== 'literal') parts[p.type] = Number(p.value);
+  }
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour === 24 ? 0 : parts.hour,
+    parts.minute,
+    parts.second,
+  );
+  return asUtc - at.getTime();
 }
 
 @Injectable()
@@ -89,7 +131,14 @@ export class UptimeService {
       this.logger.error(`Initial check failed for ${dto.url}`, err),
     );
 
-    return { ...saved, uptime24h: null, uptime7d: null, uptime30d: null };
+    return {
+      ...saved,
+      uptime24h: null,
+      uptime7d: null,
+      uptime30d: null,
+      hourly: [],
+      daily: [],
+    };
   }
 
   async findAllByUser(userId: string): Promise<MonitorWithStats[]> {
@@ -97,8 +146,14 @@ export class UptimeService {
       where: { userId },
       order: { createdAt: 'DESC' },
     });
-    const stats = await this.getStatsForMonitors(monitors.map((m) => m.id));
-    return monitors.map((m) => ({ ...m, ...this.statsOrEmpty(stats.get(m.id)) }));
+    const ids = monitors.map((m) => m.id);
+    const stats = await this.getStatsForMonitors(ids);
+    const series = await this.getSeriesForMonitors(ids);
+    return monitors.map((m) => ({
+      ...m,
+      ...this.statsOrEmpty(stats.get(m.id)),
+      ...this.seriesOrEmpty(series.get(m.id)),
+    }));
   }
 
   async findOne(id: string, userId: string): Promise<UptimeMonitor> {
@@ -110,7 +165,12 @@ export class UptimeService {
   async findOneWithStats(id: string, userId: string): Promise<MonitorWithStats> {
     const monitor = await this.findOne(id, userId);
     const stats = await this.getStatsForMonitors([monitor.id]);
-    return { ...monitor, ...this.statsOrEmpty(stats.get(monitor.id)) };
+    const series = await this.getSeriesForMonitors([monitor.id]);
+    return {
+      ...monitor,
+      ...this.statsOrEmpty(stats.get(monitor.id)),
+      ...this.seriesOrEmpty(series.get(monitor.id)),
+    };
   }
 
   async update(id: string, userId: string, dto: UpdateUptimeMonitorDto): Promise<UptimeMonitor> {
@@ -211,6 +271,77 @@ export class UptimeService {
 
   private statsOrEmpty(stats: UptimeStats | undefined): UptimeStats {
     return stats ?? { uptime24h: null, uptime7d: null, uptime30d: null };
+  }
+
+  private seriesOrEmpty(series: UptimeSeries | undefined): UptimeSeries {
+    return series ?? { hourly: [], daily: [] };
+  }
+
+  /**
+   * Build the last-24-hour (hourly) and last-7-day (daily) uptime series for the
+   * status bars, from the hourly rollup. Slots are UTC-aligned; a slot with no
+   * data is null (rendered as a gap).
+   */
+  private async getSeriesForMonitors(monitorIds: string[]): Promise<Map<string, UptimeSeries>> {
+    const map = new Map<string, UptimeSeries>();
+    if (monitorIds.length === 0) return map;
+
+    const now = new Date();
+    const since = new Date(now.getTime() - DAILY_SLOTS * DAY_MS);
+    const rows = await this.hourlyStatRepository.find({
+      where: { monitorId: In(monitorIds), hourBucket: MoreThanOrEqual(since) },
+    });
+
+    const perMonitor = new Map<string, Map<number, { total: number; up: number }>>();
+    for (const id of monitorIds) perMonitor.set(id, new Map());
+    for (const r of rows) {
+      perMonitor
+        .get(r.monitorId)
+        ?.set(new Date(r.hourBucket).getTime(), { total: r.totalChecks, up: r.upChecks });
+    }
+
+    const currentHour = new Date(now);
+    currentHour.setUTCMinutes(0, 0, 0);
+
+    // Start of "today" in the app timezone, expressed as a real UTC instant.
+    const tzOffset = tzOffsetMs(APP_TIMEZONE, now);
+    const localMidnight = new Date(now.getTime() + tzOffset);
+    localMidnight.setUTCHours(0, 0, 0, 0);
+    const currentDayStartUtc = localMidnight.getTime() - tzOffset;
+
+    for (const id of monitorIds) {
+      const hours = perMonitor.get(id) ?? new Map<number, { total: number; up: number }>();
+
+      const hourly: UptimeSeries['hourly'] = [];
+      for (let i = HOURLY_SLOTS - 1; i >= 0; i--) {
+        const slot = new Date(currentHour.getTime() - i * HOUR_MS);
+        const e = hours.get(slot.getTime());
+        hourly.push({ start: slot.toISOString(), uptime: e ? toPercent(e.up, e.total) : null });
+      }
+
+      const daily: UptimeSeries['daily'] = [];
+      for (let d = DAILY_SLOTS - 1; d >= 0; d--) {
+        const dayStart = currentDayStartUtc - d * DAY_MS;
+        const dayEnd = dayStart + DAY_MS;
+        let total = 0;
+        let up = 0;
+        for (const [k, v] of hours) {
+          if (k >= dayStart && k < dayEnd) {
+            total += v.total;
+            up += v.up;
+          }
+        }
+        daily.push({
+          // Label with the local (app-timezone) calendar date.
+          date: new Date(dayStart + tzOffset).toISOString().slice(0, 10),
+          uptime: total ? toPercent(up, total) : null,
+        });
+      }
+
+      map.set(id, { hourly, daily });
+    }
+
+    return map;
   }
 
   private async getStatsForMonitors(monitorIds: string[]): Promise<Map<string, UptimeStats>> {
