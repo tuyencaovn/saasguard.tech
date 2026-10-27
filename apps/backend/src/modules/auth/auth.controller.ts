@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   WebAuthnLoginVerifyDto,
   WebAuthnRegisterVerifyDto,
@@ -64,7 +65,15 @@ export class AuthController {
 
   @Get('me')
   async getCurrentUser(@CurrentUser() user: CurrentUserData) {
-    return { user };
+    return { user: await this.authService.getProfile(user.id) };
+  }
+
+  @Patch('profile')
+  async updateProfile(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return { user: await this.authService.updateProfile(user.id, dto) };
   }
 
   /**

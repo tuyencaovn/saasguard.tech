@@ -226,8 +226,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate capitalize">
-              {user?.role || 'User'}
+            <div className={cn('text-sm font-medium truncate', !user?.fullName && 'capitalize')}>
+              {user?.fullName || user?.role || 'User'}
             </div>
             <div className="text-xs text-white/40 truncate">
               {user?.email || 'Loading...'}

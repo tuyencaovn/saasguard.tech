@@ -17,6 +17,7 @@ export interface User {
   email: string;
   role: UserRole;
   tier?: 'free' | 'pro';
+  fullName?: string | null;
 }
 
 interface AuthContextValue {

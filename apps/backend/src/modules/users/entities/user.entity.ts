@@ -21,6 +21,9 @@ export class User {
   @Index()
   email: string;
 
+  @Column({ nullable: true, type: 'varchar' })
+  fullName: string | null;
+
   @Column()
   password: string; // bcrypt hashed
 
