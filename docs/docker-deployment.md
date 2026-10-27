@@ -341,11 +341,12 @@ docker compose -f docker-compose.prod.yml exec -T db psql -U server-monitor serv
 ```
 
 **Users & settings only** (admin, from the dashboard): **Settings → Backup &
-Restore**. *Download backup* exports users, alert rules, SSL monitors,
-notification settings, and passkeys to a JSON file; *Restore from file* **replaces**
-those tables with the uploaded backup (transactional — all-or-nothing). Transient
-data (metrics history, alert logs) is not included. The file contains password
-hashes, the SMTP password, and the Telegram token — store it securely. Restore is
+Restore**. *Download backup* exports users, alert rules, SSL monitors, uptime
+monitors, notification settings, and passkeys to a JSON file; *Restore from file*
+**replaces** those tables with the uploaded backup (transactional — all-or-nothing).
+Transient data (metrics history, alert logs, uptime history) is not included. The file
+contains password hashes, the SMTP password, the Telegram token, and the Slack webhook
+URL — store it securely. Restore is
 refused if the backup has no admin user.
 
 ### Resize Container Memory Limits

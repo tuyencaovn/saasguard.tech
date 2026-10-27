@@ -8,15 +8,18 @@ const BACKUP_TABLES = [
   'notification_settings',
   'alert_thresholds',
   'ssl_monitors',
+  'uptime_monitors',
   'passkey_credentials',
 ] as const;
 
 // Replace wipes these first (children → parents). invitations/password_resets
 // are not backed up but reference users, so they must be cleared to free the
-// foreign keys before users are deleted.
+// foreign keys before users are deleted. Deleting uptime_monitors cascades to
+// uptime_hourly_stats (history is not backed up and rebuilds on its own).
 const DELETE_ORDER = [
   'passkey_credentials',
   'ssl_monitors',
+  'uptime_monitors',
   'alert_thresholds',
   'invitations',
   'password_resets',

@@ -564,8 +564,8 @@ export default function SettingsPage() {
               <h2 className="text-lg font-semibold">Backup &amp; Restore</h2>
             </div>
             <p className="text-white/50 text-sm mb-4">
-              Users, alert rules, SSL monitors, notifications &amp; passkeys. The file
-              contains secrets — store it securely.
+              Users, alert rules, SSL monitors, uptime monitors, notifications &amp;
+              passkeys. The file contains secrets — store it securely.
             </p>
             <div className="space-y-3">
               <button
