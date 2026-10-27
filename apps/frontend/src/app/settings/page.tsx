@@ -64,9 +64,14 @@ interface VersionInfo {
 }
 
 export default function SettingsPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const router = useRouter();
   const isAdmin = currentUser?.role === 'admin';
+
+  // Full name editing
+  const [nameInput, setNameInput] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -101,6 +106,32 @@ export default function SettingsPage() {
     fetchPasskeys();
     if (isAdmin) fetchVersionInfo();
   }, [isAdmin]);
+
+  useEffect(() => {
+    setNameInput(currentUser?.fullName ?? '');
+  }, [currentUser?.fullName]);
+
+  const handleSaveName = async () => {
+    setNameSaving(true);
+    setNameSaved(false);
+    try {
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fullName: nameInput.trim() }),
+      });
+      if (res.ok) {
+        await refreshUser();
+        setNameSaved(true);
+        setTimeout(() => setNameSaved(false), 2000);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setNameSaving(false);
+    }
+  };
 
   // While an update runs the backend recreates itself, so polling will fail for
   // a bit — keep polling and recover once it's back with the new version.
@@ -369,11 +400,11 @@ export default function SettingsPage() {
 
       <div className="p-4 md:p-8">
         {/* Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
 
-          {/* Profile Card */}
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
+          {/* Account & Security Card */}
+          <div className="glass-card rounded-2xl p-6 md:col-span-2 xl:col-span-2">
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className={cn(
                   'w-10 h-10 rounded-xl flex items-center justify-center border',
@@ -387,20 +418,45 @@ export default function SettingsPage() {
                     <Eye className="w-5 h-5 text-cyan-400" />
                   )}
                 </div>
-                <h2 className="text-lg font-semibold">Profile</h2>
+                <h2 className="text-lg font-semibold">Account &amp; Security</h2>
               </div>
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                className="px-3 py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all flex items-center gap-2"
                 title="Change Password"
               >
                 <Key className="w-4 h-4" />
+                <span className="hidden sm:inline">Change password</span>
               </button>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+
+            {/* Account fields */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-white/40 uppercase tracking-wider mb-2">Full name</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="Your name"
+                    maxLength={100}
+                    className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    disabled={nameSaving || nameInput.trim() === (currentUser?.fullName ?? '')}
+                    className="btn-gradient px-4 py-2.5 text-white font-medium rounded-xl flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {nameSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : nameSaved ? <CheckCircle2 className="w-4 h-4" /> : null}
+                    {nameSaved ? 'Saved' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
                 <span className="text-white/50 text-sm">Email</span>
-                <span className="text-sm font-medium truncate ml-2 max-w-[180px]">
+                <span className="text-sm font-medium truncate ml-2 max-w-[260px]">
                   {currentUser?.email || '—'}
                 </span>
               </div>
@@ -416,63 +472,61 @@ export default function SettingsPage() {
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Passkeys Card */}
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center">
-                  <Fingerprint className="w-5 h-5 text-violet-400" />
+            {/* Passkeys */}
+            <div className="mt-6 pt-5 border-t border-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4 text-violet-400" />
+                  <h3 className="text-sm font-semibold">Passkeys</h3>
                 </div>
-                <h2 className="text-lg font-semibold">Passkeys</h2>
+                {webAuthnSupported && (
+                  <button
+                    onClick={() => { setPasskeyError(''); setPasskeyName(''); setShowPasskeyModal(true); }}
+                    className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    title="Add Passkey"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              {webAuthnSupported && (
-                <button
-                  onClick={() => { setPasskeyError(''); setPasskeyName(''); setShowPasskeyModal(true); }}
-                  className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                  title="Add Passkey"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+              {!webAuthnSupported ? (
+                <p className="text-sm text-white/40">This browser does not support passkeys.</p>
+              ) : passkeysLoading ? (
+                <div className="flex items-center gap-2 text-white/40 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+                </div>
+              ) : passkeys.length === 0 ? (
+                <p className="text-sm text-white/40">
+                  No passkeys yet. Add one to sign in without a password.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {passkeys.map((pk) => (
+                    <div
+                      key={pk.id}
+                      className="flex items-center justify-between gap-2 p-2.5 bg-white/5 rounded-lg"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{pk.name}</p>
+                        <p className="text-xs text-white/40">
+                          {pk.lastUsedAt
+                            ? `Last used ${new Date(pk.lastUsedAt).toLocaleDateString()}`
+                            : `Added ${new Date(pk.createdAt).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeletePasskey(pk.id)}
+                        className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all shrink-0"
+                        title="Remove passkey"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            {!webAuthnSupported ? (
-              <p className="text-sm text-white/40">This browser does not support passkeys.</p>
-            ) : passkeysLoading ? (
-              <div className="flex items-center gap-2 text-white/40 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-              </div>
-            ) : passkeys.length === 0 ? (
-              <p className="text-sm text-white/40">
-                No passkeys yet. Add one to sign in without a password.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {passkeys.map((pk) => (
-                  <div
-                    key={pk.id}
-                    className="flex items-center justify-between gap-2 p-2.5 bg-white/5 rounded-lg"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{pk.name}</p>
-                      <p className="text-xs text-white/40">
-                        {pk.lastUsedAt
-                          ? `Last used ${new Date(pk.lastUsedAt).toLocaleDateString()}`
-                          : `Added ${new Date(pk.createdAt).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeletePasskey(pk.id)}
-                      className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all shrink-0"
-                      title="Remove passkey"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Infrastructure status — admin only */}
@@ -620,7 +674,7 @@ export default function SettingsPage() {
                 <h2 className="text-lg font-semibold">Notifications</h2>
               </div>
               <p className="text-sm text-white/50">
-                Configure Email (SMTP) and Telegram notification settings
+                Configure Email (SMTP), Telegram and Slack notification settings
               </p>
               <div className="mt-4 text-sm text-violet-400 flex items-center gap-2">
                 <span>Configure →</span>
