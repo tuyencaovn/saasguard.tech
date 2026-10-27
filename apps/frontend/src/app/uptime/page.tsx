@@ -100,6 +100,37 @@ function StatusBar({ segments }: { segments: { key: string; uptime: number | nul
   );
 }
 
+// 24h bar chart with an hourly time axis — uniform-height bars coloured by uptime.
+function HourlyChart({ points }: { points: { start: string; uptime: number | null }[] }) {
+  if (points.length === 0) {
+    return <div className="h-7 rounded-md bg-white/5" />;
+  }
+  const fmtTime = (s: string) =>
+    new Date(s).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const ticks = [0, Math.floor(points.length / 4), Math.floor(points.length / 2), Math.floor((points.length * 3) / 4)];
+  return (
+    <div>
+      <div className="flex items-stretch gap-[2px] h-7">
+        {points.map((p) => (
+          <span
+            key={p.start}
+            title={`${new Date(p.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })} — ${p.uptime === null ? 'no data' : `${p.uptime}% up`}`}
+            className={cn('flex-1 rounded-[2px] transition-colors', segColor(p.uptime))}
+          />
+        ))}
+      </div>
+      <div className="relative mt-1 h-3 text-[10px] text-white/30 select-none">
+        {ticks.map((i) => (
+          <span key={i} className="absolute -translate-x-1/2 first:translate-x-0" style={{ left: `${((i + 0.5) / points.length) * 100}%` }}>
+            {fmtTime(points[i].start)}
+          </span>
+        ))}
+        <span className="absolute right-0">now</span>
+      </div>
+    </div>
+  );
+}
+
 export default function UptimePage() {
   const [monitors, setMonitors] = useState<UptimeMonitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,16 +370,7 @@ export default function UptimePage() {
                     <span className="text-white/20">/</span>
                     <span className={uptimeColor(monitor.uptime30d)} title="Last 30 days">{formatUptime(monitor.uptime30d)}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-white/30 w-5 shrink-0">24h</span>
-                    <StatusBar
-                      segments={(monitor.hourly ?? []).map((h) => ({
-                        key: h.start,
-                        uptime: h.uptime,
-                        title: `${new Date(h.start).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })} — ${h.uptime === null ? 'no data' : `${h.uptime}% up`}`,
-                      }))}
-                    />
-                  </div>
+                  <HourlyChart points={monitor.hourly ?? []} />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-white/30 w-5 shrink-0">7d</span>
                     <StatusBar
