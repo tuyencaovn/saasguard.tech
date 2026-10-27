@@ -79,7 +79,7 @@ services:
     ports:
       - "${BIND_HOST:-127.0.0.1}:${DASH_PORT:-3006}:3006"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3006/login"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3006/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
