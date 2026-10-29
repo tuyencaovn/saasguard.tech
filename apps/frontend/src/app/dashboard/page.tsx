@@ -91,17 +91,19 @@ async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsD
 }
 
 // Fetch aggregated history (long ranges). Backend returns hourly buckets up to
-// 30 days and daily buckets beyond that; each point uses average values.
+// 30 days and daily buckets beyond that. CPU/RAM/Disk use the per-bucket peak
+// (max) so spikes stay visible and line up with threshold alerts, which fire on
+// instantaneous peaks; network keeps the average since it isn't alerted on.
 async function fetchAggregatedHistory(days: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/metrics/history/aggregated?days=${days}`);
     if (!res.ok) return { metrics: [], network: [], linkSpeed: [] };
     const data = await res.json();
-    const metrics = data.map((item: { bucket: string; cpuAvg: number; ramAvg: number; diskAvg: number }) => ({
+    const metrics = data.map((item: { bucket: string; cpuMax: number; ramMax: number; diskMax: number }) => ({
       timestamp: new Date(item.bucket).getTime(),
-      cpu: Number(item.cpuAvg),
-      ram: Number(item.ramAvg),
-      disk: Number(item.diskAvg),
+      cpu: Number(item.cpuMax),
+      ram: Number(item.ramMax),
+      disk: Number(item.diskMax),
     }));
     const network = data.map((item: { bucket: string; networkRxAvg?: number; networkTxAvg?: number }) => ({
       timestamp: new Date(item.bucket).getTime(),
