@@ -31,6 +31,7 @@ interface AlertThreshold {
   enabled: boolean;
   channels: ('email' | 'telegram')[];
   cooldownMs: number;
+  durationSeconds?: number;
   windowMinutes?: number;
   lastTriggeredAt?: string | null;
 }
@@ -372,6 +373,16 @@ export default function AlertsPage() {
                             )}
                           </span>
                         </div>
+                        {threshold.metricName !== 'crash_loop' && (
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                            <span className="text-sm text-white/50">Sustained for</span>
+                            <span className="text-sm font-mono">
+                              {threshold.durationSeconds && threshold.durationSeconds > 0
+                                ? `${Math.round(threshold.durationSeconds / 60)} minutes`
+                                : 'Instant'}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                           <span className="text-sm text-white/50">Cooldown</span>
                           <span className="text-sm font-mono">{Math.round(threshold.cooldownMs / 60000)} minutes</span>
@@ -597,6 +608,7 @@ export default function AlertsPage() {
           channels: editingThreshold.channels,
           enabled: editingThreshold.enabled,
           cooldownMs: editingThreshold.cooldownMs,
+          durationSeconds: editingThreshold.durationSeconds,
           windowMinutes: editingThreshold.windowMinutes,
         } : undefined}
       />

@@ -18,7 +18,14 @@ export interface ThresholdFormData {
   channels: ('email' | 'telegram')[];
   enabled: boolean;
   cooldownMs: number;
+  durationSeconds?: number;
   windowMinutes?: number;
+}
+
+// Require continuous breach for this long before alerting. CPU/RAM are spiky
+// (10 min), disk fills slowly (0 = immediate).
+function defaultDurationForMetric(metric: ThresholdFormData['metricName']): number {
+  return metric === 'cpu' || metric === 'ram' ? 600 : 0;
 }
 
 const metricOptions = [
@@ -45,6 +52,16 @@ const cooldownOptions = [
   { value: 3600000, label: '1 hour' },
 ];
 
+const durationOptions = [
+  { value: 0, label: 'Instant (first breach)' },
+  { value: 60, label: '1 minute' },
+  { value: 300, label: '5 minutes' },
+  { value: 600, label: '10 minutes' },
+  { value: 900, label: '15 minutes' },
+  { value: 1800, label: '30 minutes' },
+  { value: 3600, label: '1 hour' },
+];
+
 const defaultFormData: ThresholdFormData = {
   metricName: 'cpu',
   operator: '>',
@@ -52,6 +69,7 @@ const defaultFormData: ThresholdFormData = {
   channels: ['email'],
   enabled: true,
   cooldownMs: 300000,
+  durationSeconds: 600,
 };
 
 export function ThresholdModal({ isOpen, onClose, onSave, initialData }: ThresholdModalProps) {
@@ -70,6 +88,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
         channels: initialData.channels,
         enabled: initialData.enabled,
         cooldownMs: initialData.cooldownMs,
+        durationSeconds: initialData.durationSeconds ?? defaultDurationForMetric(initialData.metricName),
         windowMinutes: initialData.windowMinutes,
       });
     } else {
@@ -149,7 +168,7 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, metricName: option.value as ThresholdFormData['metricName'] }))}
+                    onClick={() => setFormData((prev) => ({ ...prev, metricName: option.value as ThresholdFormData['metricName'], durationSeconds: defaultDurationForMetric(option.value as ThresholdFormData['metricName']) }))}
                     className={cn(
                       'p-4 rounded-xl border transition-all flex flex-col items-center gap-2',
                       isSelected
@@ -272,6 +291,25 @@ export function ThresholdModal({ isOpen, onClose, onSave, initialData }: Thresho
               <p className="text-xs text-amber-400 mt-2">Select at least one notification channel</p>
             )}
           </div>
+
+          {/* Sustained duration (not applicable to crash loop) */}
+          {formData.metricName !== 'crash_loop' && (
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">Sustained Duration</label>
+              <select
+                value={formData.durationSeconds ?? 0}
+                onChange={(e) => setFormData((prev) => ({ ...prev, durationSeconds: Number(e.target.value) }))}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20"
+              >
+                {durationOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-[#1a1a2e]">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-white/40 mt-2">Only alert if the metric stays over the threshold this long continuously. Instant = alert on the first breach.</p>
+            </div>
+          )}
 
           {/* Cooldown */}
           <div>

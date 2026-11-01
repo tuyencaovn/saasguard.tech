@@ -36,6 +36,12 @@ export class CreateThresholdDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(86400) // sustained up to 24h; 0 = fire on first breach
+  durationSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
   @Min(1)
   @Max(60)
   windowMinutes?: number;

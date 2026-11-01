@@ -21,6 +21,9 @@ interface SystemMetrics {
 export class AlertsScheduler {
   private readonly logger = new Logger(AlertsScheduler.name);
   private readonly appName: string;
+  // thresholdId -> epoch ms when the metric first went over the threshold (reset
+  // when it drops back under). Used to enforce each threshold's durationSeconds.
+  private readonly breachSince = new Map<string, number>();
 
   constructor(
     private readonly alertsService: AlertsService,
@@ -61,25 +64,39 @@ export class AlertsScheduler {
         const currentValue = this.getMetricValue(metrics, threshold.metricName);
         const shouldTrigger = this.checkCondition(currentValue, threshold.operator, threshold.value);
 
-        if (shouldTrigger) {
-          this.logger.log(`Threshold triggered: ${threshold.metricName} ${threshold.operator} ${threshold.value} (current: ${currentValue.toFixed(1)}%)`);
-
-          // Check cooldown
-          const canSend = await this.alertsService.canSendAlert(threshold.id);
-          if (!canSend) {
-            this.logger.log(`Skipping alert (cooldown active) for threshold ${threshold.id}`);
-            continue;
-          }
-
-          // Save current metrics to history so chart reflects the alert spike
-          const fullMetrics = this.metricsService.getCachedMetrics();
-          if (fullMetrics) {
-            await this.metricsService.saveToHistory(fullMetrics).catch(() => {});
-          }
-
-          // Send notifications to all channels
-          await this.sendNotifications(threshold, currentValue);
+        if (!shouldTrigger) {
+          // Breach ended (or never started) — reset the sustained timer.
+          this.breachSince.delete(threshold.id);
+          continue;
         }
+
+        // Require the breach to persist for durationSeconds before the first alert.
+        if (!this.breachSince.has(threshold.id)) {
+          this.breachSince.set(threshold.id, Date.now());
+        }
+        const sustainedMs = Date.now() - (this.breachSince.get(threshold.id) as number);
+        const requiredMs = (threshold.durationSeconds ?? 0) * 1000;
+        if (sustainedMs < requiredMs) {
+          continue; // over the threshold, but not long enough yet
+        }
+
+        this.logger.log(`Threshold triggered: ${threshold.metricName} ${threshold.operator} ${threshold.value} (current: ${currentValue.toFixed(1)}%, sustained ${Math.round(sustainedMs / 1000)}s)`);
+
+        // Check cooldown
+        const canSend = await this.alertsService.canSendAlert(threshold.id);
+        if (!canSend) {
+          this.logger.log(`Skipping alert (cooldown active) for threshold ${threshold.id}`);
+          continue;
+        }
+
+        // Save current metrics to history so chart reflects the alert spike
+        const fullMetrics = this.metricsService.getCachedMetrics();
+        if (fullMetrics) {
+          await this.metricsService.saveToHistory(fullMetrics).catch(() => {});
+        }
+
+        // Send notifications to all channels
+        await this.sendNotifications(threshold, currentValue);
       }
     } catch (error) {
       this.logger.error('Failed to check thresholds', error);

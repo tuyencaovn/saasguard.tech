@@ -22,10 +22,17 @@ export class AlertsService {
     return this.configService.get<number>('ALERT_LOG_RETENTION_DAYS', 30);
   }
 
+  // Sensible default "sustained" window per metric when the client omits one:
+  // CPU/RAM are spiky, so require 10 minutes continuously; disk fills slowly, so 0.
+  private defaultDurationSeconds(metricName: MetricName): number {
+    return metricName === MetricName.CPU || metricName === MetricName.RAM ? 600 : 0;
+  }
+
   // Threshold CRUD
   async createThreshold(dto: CreateThresholdDto, userId?: string): Promise<AlertThreshold> {
     const threshold = this.thresholdRepository.create({
       ...dto,
+      durationSeconds: dto.durationSeconds ?? this.defaultDurationSeconds(dto.metricName),
       userId,
     });
     return this.thresholdRepository.save(threshold);

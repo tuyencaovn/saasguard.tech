@@ -40,6 +40,12 @@ export class UpdateThresholdDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(86400)
+  durationSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
   @Min(1)
   @Max(60)
   windowMinutes?: number;

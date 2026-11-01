@@ -54,6 +54,12 @@ export class AlertThreshold {
   @Column({ default: 300000 }) // 5 minutes cooldown
   cooldownMs: number;
 
+  // Metric must stay over the threshold continuously for this long before the
+  // first alert fires (0 = alert on the first breaching sample). Independent of
+  // cooldown, which only spaces out repeat alerts after the first one.
+  @Column({ default: 0 })
+  durationSeconds: number;
+
   @Column({ default: 10 }) // crash detection window in minutes
   windowMinutes: number;
 
