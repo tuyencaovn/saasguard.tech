@@ -63,6 +63,37 @@ function formatNetworkSpeed(bytesPerSec: number): string {
   return Math.round(mbps).toString();
 }
 
+// Downsample raw points into `maxPoints` time buckets, keeping the PEAK (max) of
+// each numeric key per bucket. This matches the live-append resolution (so the
+// window isn't later truncated) and preserves spikes so the chart lines up with
+// the peak-based threshold alerts. Input must be sorted ascending by timestamp.
+function downsampleByMax<T extends { timestamp: number }>(points: T[], maxPoints: number, keys: (keyof T)[]): T[] {
+  if (points.length <= maxPoints) return points;
+  const first = points[0].timestamp;
+  const span = Math.max(1, points[points.length - 1].timestamp - first);
+  const bucketMs = span / maxPoints;
+  const out: T[] = [];
+  let acc: T | null = null;
+  let accIdx = -1;
+  for (const p of points) {
+    const idx = Math.min(maxPoints - 1, Math.floor((p.timestamp - first) / bucketMs));
+    if (!acc || idx !== accIdx) {
+      if (acc) out.push(acc);
+      acc = { ...p };
+      accIdx = idx;
+    } else {
+      const a = acc as Record<string, number>;
+      for (const k of keys) {
+        const key = k as string;
+        const v = (p as Record<string, number>)[key];
+        if (v > a[key]) a[key] = v;
+      }
+    }
+  }
+  if (acc) out.push(acc);
+  return out;
+}
+
 // Fetch metrics history from API
 async function fetchMetricsHistory(minutes: number): Promise<{ metrics: MetricsDataPoint[]; network: NetworkDataPoint[]; linkSpeed: LinkSpeedDataPoint[] }> {
   try {
@@ -140,6 +171,13 @@ export default function DashboardPage() {
       ? fetchAggregatedHistory(config.days ?? 30)
       : fetchMetricsHistory(config.minutes ?? 60);
     loader.then(({ metrics: metricsData, network: networkData, linkSpeed: linkSpeedData }) => {
+      // Raw ranges come back at 1 point/minute; downsample to the view's point
+      // budget (peak per bucket) so the full range stays on screen and spikes show.
+      if (config.source === 'raw') {
+        metricsData = downsampleByMax(metricsData, config.maxPoints, ['cpu', 'ram', 'disk']);
+        networkData = downsampleByMax(networkData, config.maxPoints, ['rx', 'tx']);
+        linkSpeedData = downsampleByMax(linkSpeedData, config.maxPoints, ['speed']);
+      }
       setMetricsHistory(metricsData);
       setNetworkHistory(networkData);
       setLinkSpeedHistory(linkSpeedData);

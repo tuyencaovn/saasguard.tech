@@ -150,7 +150,7 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
             ]}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="cpu"
             stroke="#8b5cf6"
             strokeWidth={2}
@@ -158,7 +158,7 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
             activeDot={{ r: 4, fill: '#8b5cf6' }}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="ram"
             stroke="#06b6d4"
             strokeWidth={2}
@@ -166,7 +166,7 @@ export function PerformanceChart({ data, timeRange }: PerformanceChartProps) {
             activeDot={{ r: 4, fill: '#06b6d4' }}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="disk"
             stroke="#f59e0b"
             strokeWidth={2}
